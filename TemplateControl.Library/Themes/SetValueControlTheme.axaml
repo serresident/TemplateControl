@@ -17,10 +17,16 @@
     <SolidColorBrush x:Key="SetValueWarningTextBrush" Color="#FFD700" />
     <SolidColorBrush x:Key="SetValueConfirmBtnBgBrush" Color="#B2FFD700" />
 
+    <SolidColorBrush x:Key="SetValueControlBgBrush" Color="#0CFFFFFF" />
+    <SolidColorBrush x:Key="SetValueControlBorderBrush" Color="#26FFFFFF" />
+    
+    <SolidColorBrush x:Key="SetValueInternalFrameBgBrush" Color="#1AFFFFFF" />
+    <SolidColorBrush x:Key="SetValueInternalFrameBorderBrush" Color="#40FFFFFF" />
+
     <ControlTheme x:Key="{x:Type local:SetValueControl}" TargetType="local:SetValueControl">
         
-        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SetValueControlBgBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SetValueControlBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="16" />
@@ -34,12 +40,19 @@
                         CornerRadius="{TemplateBinding CornerRadius}"
                         Padding="{TemplateBinding Padding}">
                     
-                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*">
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*">
                         
-                        <!-- Header: Values & Numpad Toggle -->
-                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+                        <!-- Title Header -->
+                        <TextBlock Grid.Row="0" Text="{TemplateBinding Title}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" LetterSpacing="2" Margin="0,0,0,12" IsVisible="{Binding Title, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                        <!-- Values & Numpad Toggle -->
+                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
                             <StackPanel Grid.Column="0" Orientation="Vertical">
-                                <TextBlock Text="УСТАВКА" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" LetterSpacing="1.5" />
+                                <!-- Уставка Label with Blue Outline -->
+                                <Border BorderBrush="#4488FF" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,0,0,6">
+                                    <TextBlock Text="УСТАВКА" FontSize="10" FontWeight="Bold" Foreground="#4488FF" LetterSpacing="1.5" />
+                                </Border>
+                                
                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
                                     <TextBlock Text="{Binding #PART_Track.Value, StringFormat={}{0:F2}}" FontSize="32" FontWeight="Bold" x:Name="TargetValueDisplay">
                                         <TextBlock.Foreground>
@@ -51,7 +64,14 @@
                                             </MultiBinding>
                                         </TextBlock.Foreground>
                                     </TextBlock>
-                                    <TextBlock Text="{Binding CurrentValue, RelativeSource={RelativeSource TemplatedParent}, StringFormat={}Тек: {0:F2}}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorTertiaryBrush}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                                    
+                                    <!-- Тек: Label with Blue Outline and Value -->
+                                    <StackPanel x:Name="PART_CurrentValueDisplay" Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom" Margin="0,0,0,6">
+                                        <Border BorderBrush="#4488FF" BorderThickness="1" CornerRadius="4" Padding="4,2" VerticalAlignment="Center">
+                                            <TextBlock Text="Тек:" FontSize="10" FontWeight="Bold" Foreground="#4488FF" />
+                                        </Border>
+                                        <TextBlock Text="{Binding CurrentValue, RelativeSource={RelativeSource TemplatedParent}, StringFormat={}{0:F2}}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
 
@@ -61,44 +81,58 @@
                         </Grid>
 
                         <!-- Slider and Steppers -->
-                        <Grid Grid.Row="1" x:Name="PART_SliderGrid" RowDefinitions="Auto,Auto" Margin="0,0,0,16">
-                            
-                            <!-- Safe Bounds Labels -->
-                            <Grid Grid.Row="0" Margin="56,0,104,0" IsVisible="{TemplateBinding SafeZonesEnabled}">
-                                <TextBlock HorizontalAlignment="Left" Text="{Binding SafeMinimum, RelativeSource={RelativeSource TemplatedParent}, StringFormat={}Безоп. мин: {0:F1}}" FontSize="10" Foreground="{DynamicResource SetValueSafeMinLabelBrush}" Opacity="0.8" />
-                                <TextBlock HorizontalAlignment="Right" Text="{Binding SafeMaximum, RelativeSource={RelativeSource TemplatedParent}, StringFormat={}Безоп. макс: {0:F1}}" FontSize="10" Foreground="{DynamicResource SetValueSafeMaxLabelBrush}" Opacity="0.8" />
-                            </Grid>
-                            
-                            <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto">
-                                <Button Grid.Column="0" x:Name="PART_DecreaseBtn" Content="-" Width="40" Height="40" FontSize="20" FontWeight="Bold" AutomationProperties.Name="Decrease Value" />
+                        <Border Grid.Row="2" x:Name="PART_SliderGrid" 
+                                Background="{DynamicResource SetValueInternalFrameBgBrush}"
+                                BorderBrush="{DynamicResource SetValueInternalFrameBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16,12"
+                                Margin="0,0,0,16">
+                            <Grid RowDefinitions="Auto,Auto">
                                 
-                                <Slider Grid.Column="1" x:Name="PART_Track" 
-                                        Margin="16,0" VerticalAlignment="Center"
-                                        Minimum="{TemplateBinding Minimum}" 
-                                        Maximum="{TemplateBinding Maximum}">
-                                        <Slider.Foreground>
-                                            <MultiBinding Converter="{StaticResource SafeZoneColor}">
-                                                <Binding Path="#PART_Track.Value" />
-                                                <Binding Path="SafeMinimum" RelativeSource="{RelativeSource TemplatedParent}" />
-                                                <Binding Path="SafeMaximum" RelativeSource="{RelativeSource TemplatedParent}" />
-                                                <Binding Path="SafeZonesEnabled" RelativeSource="{RelativeSource TemplatedParent}" />
-                                            </MultiBinding>
-                                        </Slider.Foreground>
-                                </Slider>
-                                        
-                                <Button Grid.Column="2" x:Name="PART_IncreaseBtn" Content="+" Width="40" Height="40" FontSize="20" FontWeight="Bold" AutomationProperties.Name="Increase Value" />
+                                <!-- Safe Bounds Labels -->
+                                <Grid Grid.Row="0" Margin="44,0,92,0" IsVisible="{TemplateBinding SafeZonesEnabled}">
+                                    <TextBlock HorizontalAlignment="Left" Text="{Binding SafeMinimum, RelativeSource={RelativeSource TemplatedParent}, StringFormat={}Безоп. мин: {0:F1}}" FontSize="10" Foreground="{DynamicResource SetValueSafeMinLabelBrush}" Opacity="0.8" />
+                                    <TextBlock HorizontalAlignment="Right" Text="{Binding SafeMaximum, RelativeSource={RelativeSource TemplatedParent}, StringFormat={}Безоп. макс: {0:F1}}" FontSize="10" Foreground="{DynamicResource SetValueSafeMaxLabelBrush}" Opacity="0.8" />
+                                </Grid>
+                                
+                                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,4,0,0">
+                                    <Button Grid.Column="0" x:Name="PART_DecreaseBtn" Content="-" Width="40" Height="40" FontSize="20" FontWeight="Bold" AutomationProperties.Name="Decrease Value" />
+                                    
+                                    <Slider Grid.Column="1" x:Name="PART_Track" 
+                                            Margin="16,0" VerticalAlignment="Center"
+                                            Minimum="{TemplateBinding Minimum}" 
+                                            Maximum="{TemplateBinding Maximum}">
+                                            <Slider.Foreground>
+                                                <MultiBinding Converter="{StaticResource SafeZoneColor}">
+                                                    <Binding Path="#PART_Track.Value" />
+                                                    <Binding Path="SafeMinimum" RelativeSource="{RelativeSource TemplatedParent}" />
+                                                    <Binding Path="SafeMaximum" RelativeSource="{RelativeSource TemplatedParent}" />
+                                                    <Binding Path="SafeZonesEnabled" RelativeSource="{RelativeSource TemplatedParent}" />
+                                                </MultiBinding>
+                                            </Slider.Foreground>
+                                    </Slider>
+                                            
+                                    <Button Grid.Column="2" x:Name="PART_IncreaseBtn" Content="+" Width="40" Height="40" FontSize="20" FontWeight="Bold" AutomationProperties.Name="Increase Value" />
 
-                                <Button Grid.Column="3" x:Name="PART_ApplyTrackBtn" 
-                                        Content="✔️" Width="40" Height="40" FontSize="16" 
-                                        Margin="8,0,0,0" IsVisible="False"
-                                        Background="{DynamicResource SetValueApplyBtnBgBrush}" 
-                                        BorderBrush="{DynamicResource SetValueApplyBtnBorderBrush}" BorderThickness="1"
-                                        AutomationProperties.Name="Apply Slider Value" />
+                                    <Button Grid.Column="3" x:Name="PART_ApplyTrackBtn" 
+                                            Content="✔️" Width="40" Height="40" FontSize="16" 
+                                            Margin="8,0,0,0" Opacity="0" IsHitTestVisible="False"
+                                            Background="{DynamicResource SetValueApplyBtnBgBrush}" 
+                                            BorderBrush="{DynamicResource SetValueApplyBtnBorderBrush}" BorderThickness="1"
+                                            AutomationProperties.Name="Apply Slider Value">
+                                        <Button.Transitions>
+                                            <Transitions>
+                                                <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                                            </Transitions>
+                                        </Button.Transitions>
+                                    </Button>
+                                </Grid>
                             </Grid>
-                        </Grid>
+                        </Border>
 
                         <!-- Quick Set & Recommendations -->
-                        <Grid Grid.Row="2" x:Name="PART_QuickSetGrid" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                        <Grid Grid.Row="3" x:Name="PART_QuickSetGrid" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
                             <!-- Recent values -->
                             <ItemsControl x:Name="PART_QuickSetPanel" ItemsSource="{TemplateBinding RecentValues}" Grid.Column="0">
                                 <ItemsControl.ItemsPanel>
@@ -205,14 +239,18 @@
 
         <!-- :track-dirty shows the apply button -->
         <Style Selector="^:track-dirty /template/ Button#PART_ApplyTrackBtn">
-            <Setter Property="IsVisible" Value="True" />
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="IsHitTestVisible" Value="True" />
         </Style>
 
         <!-- :mode-minimal hides the slider and quick sets -->
-        <Style Selector="^:mode-minimal /template/ Grid#PART_SliderGrid">
+        <Style Selector="^:mode-minimal /template/ Border#PART_SliderGrid">
             <Setter Property="IsVisible" Value="False" />
         </Style>
         <Style Selector="^:mode-minimal /template/ Grid#PART_QuickSetGrid">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="^:mode-minimal /template/ StackPanel#PART_CurrentValueDisplay">
             <Setter Property="IsVisible" Value="False" />
         </Style>
         <Style Selector="^:mode-minimal">

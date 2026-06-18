@@ -213,6 +213,24 @@ namespace TemplateControl
             set => SetValue(RecentValuesProperty, value);
         }
 
+        public static readonly StyledProperty<int> DecimalPlacesProperty =
+            AvaloniaProperty.Register<SetValueControl, int>(nameof(DecimalPlaces), 2);
+
+        public int DecimalPlaces
+        {
+            get => GetValue(DecimalPlacesProperty);
+            set => SetValue(DecimalPlacesProperty, value);
+        }
+
+        public static readonly StyledProperty<string> TitleProperty =
+            AvaloniaProperty.Register<SetValueControl, string>(nameof(Title), string.Empty);
+
+        public string Title
+        {
+            get => GetValue(TitleProperty);
+            set => SetValue(TitleProperty, value);
+        }
+
         #endregion
 
         #region Coerce Logic
@@ -420,6 +438,7 @@ namespace TemplateControl
         
         private void UpdateTrackPendingValue(decimal val)
         {
+            val = Math.Round(val, DecimalPlaces, MidpointRounding.AwayFromZero);
             if (val < Minimum) val = Minimum;
             if (val > Maximum) val = Maximum;
             
@@ -439,8 +458,8 @@ namespace TemplateControl
         {
             if (_isSliderUpdating) return;
 
-            // Slider sets double, convert to decimal, but do not apply yet!
-            decimal val = (decimal)e.NewValue;
+            // Slider sets double, convert to decimal and round to defined decimal places
+            decimal val = Math.Round((decimal)e.NewValue, DecimalPlaces, MidpointRounding.AwayFromZero);
             _pendingTrackValue = val;
             PseudoClasses.Set(":track-dirty", _pendingTrackValue != Value);
         }
@@ -458,14 +477,14 @@ namespace TemplateControl
             {
                 if (!_numPadPopup.IsOpen)
                 {
-                    // Pass current value to the numpad before opening
+                    // Pass current pending value to the numpad before opening
                     var pad = _numPadPopup.Child as NumericPad;
                     if (pad == null && _numPadPopup.Child is Border b)
                         pad = b.Child as NumericPad;
                     
                     if (pad != null) 
                     {
-                        pad.Value = Value;
+                        pad.Value = PseudoClasses.Contains(":track-dirty") ? _pendingTrackValue : Value;
                     }
                 }
                 _numPadPopup.IsOpen = !_numPadPopup.IsOpen;

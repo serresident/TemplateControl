@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Core Launch (Avalonia)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/TemplateControl/bin/Debug/net8.0/TemplateControl.Demo.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/TemplateControl",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "justMyCode": false,
+            "requireExactSource": false,
+            "logging": {
+                "moduleLoad": false
+            }
+        }
+    ]
+}
