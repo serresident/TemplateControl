@@ -109,7 +109,7 @@
                                PlacementTarget="PART_NumPadToggle" 
                                Placement="BottomEdgeAlignedRight" 
                                IsLightDismissEnabled="True">
-                            <Border Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" 
+                            <Border Background="{DynamicResource FlyoutPresenterBackground}" 
                                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
                                     BorderThickness="1" CornerRadius="8" Padding="10"
                                     BoxShadow="0 8 16 0 #40000000">
