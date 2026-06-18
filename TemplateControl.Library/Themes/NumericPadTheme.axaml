@@ -24,16 +24,16 @@
                         <Grid Grid.Row="0" ColumnDefinitions="*,*" Margin="0,0,0,4">
                             <TextBlock Grid.Column="0"
                                        FontSize="10"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Foreground="#4488FF"
                                        HorizontalAlignment="Left">
-                                <Run Text="Min: " />
+                                <Run Text="Мин: " />
                                 <Run Text="{TemplateBinding Minimum}" />
                             </TextBlock>
                             <TextBlock Grid.Column="1"
                                        FontSize="10"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Foreground="#FF4444"
                                        HorizontalAlignment="Right">
-                                <Run Text="Max: " />
+                                <Run Text="Макс: " />
                                 <Run Text="{TemplateBinding Maximum}" />
                             </TextBlock>
                         </Grid>
@@ -115,7 +115,7 @@
                         <Grid Grid.Row="3" ColumnDefinitions="2*,*" Margin="0,4,0,0">
                             <Button Grid.Column="0"
                                     x:Name="PART_ClearButton"
-                                    Content="CLEAR"
+                                    Content="СБРОС"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center"
                                     FontWeight="SemiBold"

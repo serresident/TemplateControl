@@ -43,8 +43,7 @@ namespace TemplateControl
         public static readonly StyledProperty<decimal?> ValueProperty =
             AvaloniaProperty.Register<NumericPad, decimal?>(
                 nameof(Value),
-                defaultValue: null,
-                coerce: CoerceValue);
+                defaultValue: null);
 
         public static readonly StyledProperty<decimal> MinimumProperty =
             AvaloniaProperty.Register<NumericPad, decimal>(
@@ -126,16 +125,6 @@ namespace TemplateControl
 
         #region Coerce Logic
 
-        private static decimal? CoerceValue(AvaloniaObject obj, decimal? value)
-        {
-            if (obj is NumericPad pad && value.HasValue)
-            {
-                if (value.Value < pad.Minimum) return pad.Minimum;
-                if (value.Value > pad.Maximum) return pad.Maximum;
-            }
-            return value;
-        }
-
         private static decimal CoerceMinimum(AvaloniaObject obj, decimal value)
         {
             if (obj is NumericPad pad)
@@ -169,6 +158,9 @@ namespace TemplateControl
         #region Internal State
 
         private string _inputBuffer = string.Empty;
+        private string _originalBuffer = string.Empty;
+        private bool _isFreshInput = true;
+        private bool _isInternalChange = false;
         private DispatcherTimer? _errorTimer;
 
         #endregion
@@ -176,6 +168,19 @@ namespace TemplateControl
         public NumericPad()
         {
             UpdatePseudoClasses();
+        }
+
+        private void SetValueInternally(decimal? value)
+        {
+            _isInternalChange = true;
+            try
+            {
+                Value = value;
+            }
+            finally
+            {
+                _isInternalChange = false;
+            }
         }
 
         #region OnApplyTemplate — Memory Management
@@ -253,6 +258,26 @@ namespace TemplateControl
                 var oldValue = change.GetOldValue<decimal?>();
                 var newValue = change.GetNewValue<decimal?>();
 
+                // Sync internal buffer if value was set externally
+                if (!_isInternalChange)
+                {
+                    if (newValue.HasValue)
+                    {
+                        string newValStr = newValue.Value.ToString(CultureInfo.InvariantCulture);
+                        _inputBuffer = newValStr;
+                        _originalBuffer = newValStr;
+                        _isFreshInput = true;
+                        UpdateDisplay();
+                    }
+                    else
+                    {
+                        _inputBuffer = string.Empty;
+                        _originalBuffer = string.Empty;
+                        _isFreshInput = true;
+                        UpdateDisplay();
+                    }
+                }
+
                 UpdatePseudoClasses();
 
                 RaiseEvent(new NumericValueChangedEventArgs(ValueChangedEvent, oldValue, newValue));
@@ -296,7 +321,8 @@ namespace TemplateControl
         private void OnClearClick(object? sender, RoutedEventArgs e)
         {
             _inputBuffer = string.Empty;
-            Value = null;
+            _isFreshInput = false;
+            SetValueInternally(null);
             UpdateDisplay();
             UpdatePseudoClasses();
             e.Handled = true;
@@ -304,6 +330,7 @@ namespace TemplateControl
 
         private void OnBackspaceClick(object? sender, RoutedEventArgs e)
         {
+            _isFreshInput = false;
             if (_inputBuffer.Length > 0)
             {
                 _inputBuffer = _inputBuffer.Substring(0, _inputBuffer.Length - 1);
@@ -315,6 +342,11 @@ namespace TemplateControl
 
         private void OnSubmitClick(object? sender, RoutedEventArgs e)
         {
+            if (Value.HasValue && Value.Value < Minimum)
+            {
+                RevertToOriginalWithError();
+                return;
+            }
             RaiseEvent(new RoutedEventArgs(SubmitEvent));
             e.Handled = true;
         }
@@ -322,6 +354,15 @@ namespace TemplateControl
         private void OnDecimalClick(object? sender, RoutedEventArgs e)
         {
             if (!ShowDecimalSeparator) return;
+
+            if (_isFreshInput)
+            {
+                _inputBuffer = "0.";
+                _isFreshInput = false;
+                UpdateDisplay();
+                e.Handled = true;
+                return;
+            }
 
             // Prevent multiple decimal separators
             if (!_inputBuffer.Contains('.'))
@@ -343,45 +384,65 @@ namespace TemplateControl
         private void AppendDigit(string digit)
         {
             // Check MaxLength
-            string candidateBuffer = _inputBuffer + digit;
+            string candidateBuffer = _isFreshInput ? digit : _inputBuffer + digit;
+            
             if (candidateBuffer.Length > MaxLength)
             {
-                ShowErrorState();
+                RevertToOriginalWithError();
                 return;
             }
 
             // Pre-validate: parse the candidate and check bounds
             if (decimal.TryParse(candidateBuffer, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal candidateValue))
             {
-                if (candidateValue < Minimum || candidateValue > Maximum)
+                if (candidateValue > Maximum)
                 {
-                    ShowErrorState();
+                    RevertToOriginalWithError();
                     return;
                 }
 
+                _isFreshInput = false;
                 _inputBuffer = candidateBuffer;
-                Value = candidateValue;
+                SetValueInternally(candidateValue);
                 UpdateDisplay();
             }
+        }
+
+        private void RevertToOriginalWithError()
+        {
+            ShowErrorState();
+            _inputBuffer = _originalBuffer;
+            _isFreshInput = true;
+            
+            if (decimal.TryParse(_inputBuffer, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal parsed))
+            {
+                SetValueInternally(parsed);
+            }
+            else
+            {
+                SetValueInternally(null);
+            }
+            
+            UpdateDisplay();
         }
 
         private void TryApplyBuffer()
         {
             if (string.IsNullOrEmpty(_inputBuffer))
             {
-                Value = null;
+                SetValueInternally(null);
                 return;
             }
 
             if (decimal.TryParse(_inputBuffer, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal parsed))
             {
-                if (parsed >= Minimum && parsed <= Maximum)
+                if (parsed <= Maximum)
                 {
-                    Value = parsed;
+                    SetValueInternally(parsed);
                 }
                 else
                 {
-                    Value = null;
+                    SetValueInternally(null);
                 }
             }
             // Buffer contains partial input like "0." — keep display but don't update Value

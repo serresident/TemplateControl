@@ -456,6 +456,18 @@ namespace TemplateControl
         {
             if (_numPadPopup != null)
             {
+                if (!_numPadPopup.IsOpen)
+                {
+                    // Pass current value to the numpad before opening
+                    var pad = _numPadPopup.Child as NumericPad;
+                    if (pad == null && _numPadPopup.Child is Border b)
+                        pad = b.Child as NumericPad;
+                    
+                    if (pad != null) 
+                    {
+                        pad.Value = Value;
+                    }
+                }
                 _numPadPopup.IsOpen = !_numPadPopup.IsOpen;
             }
             e.Handled = true;
