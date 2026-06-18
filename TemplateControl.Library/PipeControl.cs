@@ -11,8 +11,15 @@ using Avalonia.Rendering;
 
 namespace TemplateControl
 {
+    /// <summary>
+    /// A lookless Avalonia control that renders industrial-style pipe segments with 3D shading,
+    /// fittings (flanges, elbows), and an interactive design mode.
+    /// All rendering is performed via <see cref="Avalonia.Media.DrawingContext"/> for maximum performance.
+    /// </summary>
     public class PipeControl : TemplatedControl, ICustomHitTest
     {
+        #region Styled Properties
+
         public static readonly StyledProperty<string> PointsProperty =
             AvaloniaProperty.Register<PipeControl, string>(nameof(Points), string.Empty);
 
@@ -25,11 +32,11 @@ namespace TemplateControl
         public static readonly StyledProperty<double> CellSizeProperty =
             AvaloniaProperty.Register<PipeControl, double>(nameof(CellSize), 10.0);
 
-        public static readonly StyledProperty<string> StartFittingProperty =
-            AvaloniaProperty.Register<PipeControl, string>(nameof(StartFitting), "None");
+        public static readonly StyledProperty<FittingType> StartFittingProperty =
+            AvaloniaProperty.Register<PipeControl, FittingType>(nameof(StartFitting), FittingType.None);
 
-        public static readonly StyledProperty<string> EndFittingProperty =
-            AvaloniaProperty.Register<PipeControl, string>(nameof(EndFitting), "None");
+        public static readonly StyledProperty<FittingType> EndFittingProperty =
+            AvaloniaProperty.Register<PipeControl, FittingType>(nameof(EndFitting), FittingType.None);
 
         public static readonly StyledProperty<bool> IsDesignModeProperty =
             AvaloniaProperty.Register<PipeControl, bool>(nameof(IsDesignMode), false);
@@ -45,6 +52,22 @@ namespace TemplateControl
 
         public static readonly StyledProperty<double> ThicknessProperty =
             AvaloniaProperty.Register<PipeControl, double>(nameof(Thickness), 12.0);
+
+        public static readonly StyledProperty<Color> FlangeColorProperty =
+            AvaloniaProperty.Register<PipeControl, Color>(nameof(FlangeColor), Color.FromRgb(160, 160, 164));
+
+        public static readonly StyledProperty<Color> FlangeBorderColorProperty =
+            AvaloniaProperty.Register<PipeControl, Color>(nameof(FlangeBorderColor), Colors.Black);
+
+        public static readonly StyledProperty<Color> DesignMarkerFillProperty =
+            AvaloniaProperty.Register<PipeControl, Color>(nameof(DesignMarkerFill), Colors.White);
+
+        public static readonly StyledProperty<Color> DesignMarkerStrokeProperty =
+            AvaloniaProperty.Register<PipeControl, Color>(nameof(DesignMarkerStroke), Colors.DodgerBlue);
+
+        #endregion
+
+        #region Property Accessors
 
         public string Points
         {
@@ -70,13 +93,13 @@ namespace TemplateControl
             set => SetValue(CellSizeProperty, value);
         }
 
-        public string StartFitting
+        public FittingType StartFitting
         {
             get => GetValue(StartFittingProperty);
             set => SetValue(StartFittingProperty, value);
         }
 
-        public string EndFitting
+        public FittingType EndFitting
         {
             get => GetValue(EndFittingProperty);
             set => SetValue(EndFittingProperty, value);
@@ -112,12 +135,60 @@ namespace TemplateControl
             set => SetValue(ThicknessProperty, value);
         }
 
+        /// <summary>
+        /// Color of flange plates. Exposed as StyledProperty to avoid hardcoded values in Render.
+        /// </summary>
+        public Color FlangeColor
+        {
+            get => GetValue(FlangeColorProperty);
+            set => SetValue(FlangeColorProperty, value);
+        }
+
+        /// <summary>
+        /// Border color of flange plates.
+        /// </summary>
+        public Color FlangeBorderColor
+        {
+            get => GetValue(FlangeBorderColorProperty);
+            set => SetValue(FlangeBorderColorProperty, value);
+        }
+
+        /// <summary>
+        /// Fill color of design mode vertex markers.
+        /// </summary>
+        public Color DesignMarkerFill
+        {
+            get => GetValue(DesignMarkerFillProperty);
+            set => SetValue(DesignMarkerFillProperty, value);
+        }
+
+        /// <summary>
+        /// Stroke color of design mode vertex markers.
+        /// </summary>
+        public Color DesignMarkerStroke
+        {
+            get => GetValue(DesignMarkerStrokeProperty);
+            set => SetValue(DesignMarkerStrokeProperty, value);
+        }
+
+        #endregion
+
+        #region Cached Render Resources
+
+        private Pen? _flangeBorderPen;
+        private Pen? _designMarkerPen;
+        private SolidColorBrush? _flangeBrush;
+        private SolidColorBrush? _designMarkerBrush;
+        private bool _renderCacheDirty = true;
+
+        #endregion
+
         static PipeControl()
         {
             AffectsRender<PipeControl>(
-                PointsProperty, 
-                PipeColorProperty, 
-                ShowFlangesProperty, 
+                PointsProperty,
+                PipeColorProperty,
+                ShowFlangesProperty,
                 CellSizeProperty,
                 StartFittingProperty,
                 EndFittingProperty,
@@ -125,13 +196,44 @@ namespace TemplateControl
                 ActiveColorProperty,
                 InactiveColorProperty,
                 IsFilledProperty,
-                ThicknessProperty);
+                ThicknessProperty,
+                FlangeColorProperty,
+                FlangeBorderColorProperty,
+                DesignMarkerFillProperty,
+                DesignMarkerStrokeProperty);
         }
 
         public PipeControl()
         {
             ClipToBounds = false;
         }
+
+        protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+        {
+            base.OnPropertyChanged(change);
+
+            if (change.Property == FlangeColorProperty ||
+                change.Property == FlangeBorderColorProperty ||
+                change.Property == DesignMarkerFillProperty ||
+                change.Property == DesignMarkerStrokeProperty)
+            {
+                _renderCacheDirty = true;
+            }
+        }
+
+        private void EnsureRenderCache()
+        {
+            if (!_renderCacheDirty) return;
+
+            _flangeBrush = new SolidColorBrush(FlangeColor);
+            _flangeBorderPen = new Pen(new SolidColorBrush(FlangeBorderColor), 1);
+            _designMarkerBrush = new SolidColorBrush(DesignMarkerFill);
+            _designMarkerPen = new Pen(new SolidColorBrush(DesignMarkerStroke), 2);
+
+            _renderCacheDirty = false;
+        }
+
+        #region Rendering
 
         public override void Render(DrawingContext context)
         {
@@ -142,15 +244,17 @@ namespace TemplateControl
             var gridPoints = ParsePoints(Points);
             if (gridPoints.Count < 2) return;
 
+            EnsureRenderCache();
+
             double cellSize = CellSize;
-            var pixelPoints = new List<Point>();
+            var pixelPoints = new List<Point>(gridPoints.Count);
             foreach (var gp in gridPoints)
             {
                 pixelPoints.Add(new Point(gp.X * cellSize + cellSize / 2, gp.Y * cellSize + cellSize / 2));
             }
 
             double thickness = Thickness;
-            
+
             // Determine base color
             Color baseColor = InactiveColor;
             if (IsFilled)
@@ -168,22 +272,14 @@ namespace TemplateControl
             double startAngle = GetSegmentAngle(startPoint, nextPoint);
 
             double startElbowDir = 0;
-            bool hasStartElbow = false;
-            if (StartFitting == "Elbow90") { startElbowDir = startAngle - Math.PI / 2; hasStartElbow = true; }
-            else if (StartFitting == "ElbowMinus90") { startElbowDir = startAngle + Math.PI / 2; hasStartElbow = true; }
-            else if (StartFitting == "Elbow45") { startElbowDir = startAngle - 3 * Math.PI / 4; hasStartElbow = true; }
-            else if (StartFitting == "ElbowMinus45") { startElbowDir = startAngle + 3 * Math.PI / 4; hasStartElbow = true; }
+            bool hasStartElbow = TryGetElbowDirection(StartFitting, startAngle, isStart: true, out startElbowDir);
 
             Point endPoint = pixelPoints[pixelPoints.Count - 1];
             Point prevPoint = pixelPoints[pixelPoints.Count - 2];
             double endAngle = GetSegmentAngle(prevPoint, endPoint);
 
             double endElbowDir = 0;
-            bool hasEndElbow = false;
-            if (EndFitting == "Elbow90") { endElbowDir = endAngle + Math.PI / 2; hasEndElbow = true; }
-            else if (EndFitting == "ElbowMinus90") { endElbowDir = endAngle - Math.PI / 2; hasEndElbow = true; }
-            else if (EndFitting == "Elbow45") { endElbowDir = endAngle + Math.PI / 4; hasEndElbow = true; }
-            else if (EndFitting == "ElbowMinus45") { endElbowDir = endAngle - Math.PI / 4; hasEndElbow = true; }
+            bool hasEndElbow = TryGetElbowDirection(EndFitting, endAngle, isStart: false, out endElbowDir);
 
             // 1. Draw 3D segments
             for (int i = 0; i < pixelPoints.Count - 1; i++)
@@ -208,27 +304,24 @@ namespace TemplateControl
             }
 
             // 3. Draw joint plates, elbows, and flanges
-            var flangeBrush = new SolidColorBrush(Color.FromRgb(160, 160, 164));
-            var flangeBorderPen = new Pen(Brushes.Black, 1);
-
             for (int i = 0; i < pixelPoints.Count; i++)
             {
                 Point p = pixelPoints[i];
 
                 if (i == 0) // Start
                 {
-                    if (StartFitting == "Flange" && ShowFlanges)
+                    if (StartFitting == FittingType.Flange && ShowFlanges)
                     {
                         double angle = startAngle + Math.PI / 2;
-                        DrawFlangePlate(context, p, angle, flangeBrush, flangeBorderPen, thickness);
+                        DrawFlangePlate(context, p, angle, _flangeBrush!, _flangeBorderPen!, thickness);
                     }
                 }
                 else if (i == pixelPoints.Count - 1) // End
                 {
-                    if (EndFitting == "Flange" && ShowFlanges)
+                    if (EndFitting == FittingType.Flange && ShowFlanges)
                     {
                         double angle = endAngle + Math.PI / 2;
-                        DrawFlangePlate(context, p, angle, flangeBrush, flangeBorderPen, thickness);
+                        DrawFlangePlate(context, p, angle, _flangeBrush!, _flangeBorderPen!, thickness);
                     }
                 }
                 else // Mid corner
@@ -240,12 +333,36 @@ namespace TemplateControl
             // 4. Markers in Design Mode
             if (IsDesignMode)
             {
-                var markerBrush = Brushes.White;
-                var markerPen = new Pen(Brushes.DodgerBlue, 2);
                 for (int i = 0; i < pixelPoints.Count; i++)
                 {
-                    context.DrawEllipse(markerBrush, markerPen, pixelPoints[i], 6, 6);
+                    context.DrawEllipse(_designMarkerBrush, _designMarkerPen, pixelPoints[i], 6, 6);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Resolves elbow direction angle from fitting type and segment angle.
+        /// </summary>
+        private static bool TryGetElbowDirection(FittingType fitting, double segmentAngle, bool isStart, out double elbowDir)
+        {
+            elbowDir = 0;
+
+            switch (fitting)
+            {
+                case FittingType.Elbow90:
+                    elbowDir = isStart ? segmentAngle - Math.PI / 2 : segmentAngle + Math.PI / 2;
+                    return true;
+                case FittingType.ElbowMinus90:
+                    elbowDir = isStart ? segmentAngle + Math.PI / 2 : segmentAngle - Math.PI / 2;
+                    return true;
+                case FittingType.Elbow45:
+                    elbowDir = isStart ? segmentAngle - 3 * Math.PI / 4 : segmentAngle + Math.PI / 4;
+                    return true;
+                case FittingType.ElbowMinus45:
+                    elbowDir = isStart ? segmentAngle + 3 * Math.PI / 4 : segmentAngle - Math.PI / 4;
+                    return true;
+                default:
+                    return false;
             }
         }
 
@@ -280,17 +397,17 @@ namespace TemplateControl
                 EndPoint = new RelativePoint(p1.X - nx * thickness / 2, p1.Y - ny * thickness / 2, RelativeUnit.Absolute),
                 GradientStops = new GradientStops
                 {
-                    new GradientStop(DarkenColor(baseColor, 0.65), 0.0),   // Shadow
-                    new GradientStop(LightenColor(baseColor, 0.75), 0.25), // Highlight
-                    new GradientStop(baseColor, 0.55),                    // Base Color
-                    new GradientStop(DarkenColor(baseColor, 0.35), 1.0)   // Penumbra
+                    new GradientStop(DarkenColor(baseColor, 0.65), 0.0),
+                    new GradientStop(LightenColor(baseColor, 0.75), 0.25),
+                    new GradientStop(baseColor, 0.55),
+                    new GradientStop(DarkenColor(baseColor, 0.35), 1.0)
                 }
             };
 
             context.DrawGeometry(brush, null, geometry);
         }
 
-        private void DrawFlangePlate(DrawingContext context, Point center, double angleRad, IBrush brush, Pen borderPen, double thickness)
+        private static void DrawFlangePlate(DrawingContext context, Point center, double angleRad, IBrush brush, Pen borderPen, double thickness)
         {
             double w = Math.Clamp(thickness * 0.4, 2.0, 8.0);
             double h = thickness * 2.2;
@@ -298,10 +415,10 @@ namespace TemplateControl
             var cos = Math.Cos(angleRad);
             var sin = Math.Sin(angleRad);
 
-            var p1 = new Point(center.X - w/2 * cos - h/2 * sin, center.Y - w/2 * sin + h/2 * cos);
-            var p2 = new Point(center.X + w/2 * cos - h/2 * sin, center.Y + w/2 * sin + h/2 * cos);
-            var p3 = new Point(center.X + w/2 * cos + h/2 * sin, center.Y + w/2 * sin - h/2 * cos);
-            var p4 = new Point(center.X - w/2 * cos + h/2 * sin, center.Y - w/2 * sin - h/2 * cos);
+            var p1 = new Point(center.X - w / 2 * cos - h / 2 * sin, center.Y - w / 2 * sin + h / 2 * cos);
+            var p2 = new Point(center.X + w / 2 * cos - h / 2 * sin, center.Y + w / 2 * sin + h / 2 * cos);
+            var p3 = new Point(center.X + w / 2 * cos + h / 2 * sin, center.Y + w / 2 * sin - h / 2 * cos);
+            var p4 = new Point(center.X - w / 2 * cos + h / 2 * sin, center.Y - w / 2 * sin - h / 2 * cos);
 
             var geometry = new StreamGeometry();
             using (var ctx = geometry.Open())
@@ -316,28 +433,9 @@ namespace TemplateControl
             context.DrawGeometry(brush, borderPen, geometry);
         }
 
-        private double GetSegmentAngle(Point p1, Point p2)
-        {
-            return Math.Atan2(p2.Y - p1.Y, p2.X - p1.X);
-        }
+        #endregion
 
-        private Color LightenColor(Color color, double factor)
-        {
-            return Color.FromRgb(
-                (byte)Math.Min(255, color.R + (255 - color.R) * factor),
-                (byte)Math.Min(255, color.G + (255 - color.G) * factor),
-                (byte)Math.Min(255, color.B + (255 - color.B) * factor)
-            );
-        }
-
-        private Color DarkenColor(Color color, double factor)
-        {
-            return Color.FromRgb(
-                (byte)(color.R * (1 - factor)),
-                (byte)(color.G * (1 - factor)),
-                (byte)(color.B * (1 - factor))
-            );
-        }
+        #region Hit Testing
 
         public bool HitTest(Point point)
         {
@@ -367,7 +465,7 @@ namespace TemplateControl
             return false;
         }
 
-        private bool IsPointNearSegment(Point p, Point s1, Point s2, double maxDistance)
+        private static bool IsPointNearSegment(Point p, Point s1, Point s2, double maxDistance)
         {
             double l2 = Math.Pow(s1.X - s2.X, 2) + Math.Pow(s1.Y - s2.Y, 2);
             if (l2 == 0) return Math.Sqrt(Math.Pow(p.X - s1.X, 2) + Math.Pow(p.Y - s1.Y, 2)) <= maxDistance;
@@ -380,6 +478,10 @@ namespace TemplateControl
 
             return dist <= maxDistance;
         }
+
+        #endregion
+
+        #region Context Menus (Design Mode)
 
         public void ShowVertexContextMenu(int pointIndex, Point screenPos)
         {
@@ -398,31 +500,7 @@ namespace TemplateControl
                 menu.Items.Add(addStartItem);
 
                 var fittingsMenu = new MenuItem { Header = "Установить фитинг на старте" };
-                
-                var noneItem = new MenuItem { Header = "Нет", IsChecked = StartFitting == "None" };
-                noneItem.Click += (s, ev) => StartFitting = "None";
-                fittingsMenu.Items.Add(noneItem);
-
-                var flangeItem = new MenuItem { Header = "Фланец", IsChecked = StartFitting == "Flange" };
-                flangeItem.Click += (s, ev) => StartFitting = "Flange";
-                fittingsMenu.Items.Add(flangeItem);
-
-                var elbow90Item = new MenuItem { Header = "Отвод 90°", IsChecked = StartFitting == "Elbow90" };
-                elbow90Item.Click += (s, ev) => StartFitting = "Elbow90";
-                fittingsMenu.Items.Add(elbow90Item);
-
-                var elbowM90Item = new MenuItem { Header = "Отвод -90°", IsChecked = StartFitting == "ElbowMinus90" };
-                elbowM90Item.Click += (s, ev) => StartFitting = "ElbowMinus90";
-                fittingsMenu.Items.Add(elbowM90Item);
-
-                var elbow45Item = new MenuItem { Header = "Отвод 45°", IsChecked = StartFitting == "Elbow45" };
-                elbow45Item.Click += (s, ev) => StartFitting = "Elbow45";
-                fittingsMenu.Items.Add(elbow45Item);
-
-                var elbowM45Item = new MenuItem { Header = "Отвод -45°", IsChecked = StartFitting == "ElbowMinus45" };
-                elbowM45Item.Click += (s, ev) => StartFitting = "ElbowMinus45";
-                fittingsMenu.Items.Add(elbowM45Item);
-
+                AddFittingMenuItems(fittingsMenu, StartFitting, fitting => StartFitting = fitting);
                 menu.Items.Add(fittingsMenu);
             }
             else if (pointIndex == gridPoints.Count - 1)
@@ -432,31 +510,7 @@ namespace TemplateControl
                 menu.Items.Add(addEndItem);
 
                 var fittingsMenu = new MenuItem { Header = "Установить фитинг на конце" };
-                
-                var noneItem = new MenuItem { Header = "Нет", IsChecked = EndFitting == "None" };
-                noneItem.Click += (s, ev) => EndFitting = "None";
-                fittingsMenu.Items.Add(noneItem);
-
-                var flangeItem = new MenuItem { Header = "Фланец", IsChecked = EndFitting == "Flange" };
-                flangeItem.Click += (s, ev) => EndFitting = "Flange";
-                fittingsMenu.Items.Add(flangeItem);
-
-                var elbow90Item = new MenuItem { Header = "Отвод 90°", IsChecked = EndFitting == "Elbow90" };
-                elbow90Item.Click += (s, ev) => EndFitting = "Elbow90";
-                fittingsMenu.Items.Add(elbow90Item);
-
-                var elbowM90Item = new MenuItem { Header = "Отвод -90°", IsChecked = EndFitting == "ElbowMinus90" };
-                elbowM90Item.Click += (s, ev) => EndFitting = "ElbowMinus90";
-                fittingsMenu.Items.Add(elbowM90Item);
-
-                var elbow45Item = new MenuItem { Header = "Отвод 45°", IsChecked = EndFitting == "Elbow45" };
-                elbow45Item.Click += (s, ev) => EndFitting = "Elbow45";
-                fittingsMenu.Items.Add(elbow45Item);
-
-                var elbowM45Item = new MenuItem { Header = "Отвод -45°", IsChecked = EndFitting == "ElbowMinus45" };
-                elbowM45Item.Click += (s, ev) => EndFitting = "ElbowMinus45";
-                fittingsMenu.Items.Add(elbowM45Item);
-
+                AddFittingMenuItems(fittingsMenu, EndFitting, fitting => EndFitting = fitting);
                 menu.Items.Add(fittingsMenu);
             }
 
@@ -474,6 +528,31 @@ namespace TemplateControl
             menu.Open(this);
         }
 
+        private static void AddFittingMenuItems(MenuItem parent, FittingType current, Action<FittingType> setter)
+        {
+            var fittings = new (FittingType type, string label)[]
+            {
+                (FittingType.None, "Нет"),
+                (FittingType.Flange, "Фланец"),
+                (FittingType.Elbow90, "Отвод 90°"),
+                (FittingType.ElbowMinus90, "Отвод -90°"),
+                (FittingType.Elbow45, "Отвод 45°"),
+                (FittingType.ElbowMinus45, "Отвод -45°"),
+            };
+
+            foreach (var (type, label) in fittings)
+            {
+                var item = new MenuItem { Header = label, IsChecked = current == type };
+                var capturedType = type;
+                item.Click += (s, ev) => setter(capturedType);
+                parent.Items.Add(item);
+            }
+        }
+
+        #endregion
+
+        #region Point Manipulation
+
         private void AddPointOnSegment(int segmentIndex, Point clickPos)
         {
             double cellSize = CellSize;
@@ -484,7 +563,7 @@ namespace TemplateControl
             if (segmentIndex >= 0 && segmentIndex < gridPoints.Count - 1)
             {
                 gridPoints.Insert(segmentIndex + 1, new Point(gridX, gridY));
-                Points = string.Join(";", gridPoints.Select(p => string.Format(CultureInfo.InvariantCulture, "{0:0.##},{1:0.##}", p.X, p.Y)));
+                Points = SerializePoints(gridPoints);
             }
         }
 
@@ -504,7 +583,7 @@ namespace TemplateControl
 
                 var newPoint = new Point(first.X + dir.X, first.Y + dir.Y);
                 gridPoints.Insert(0, newPoint);
-                Points = string.Join(";", gridPoints.Select(p => string.Format(CultureInfo.InvariantCulture, "{0:0.##},{1:0.##}", p.X, p.Y)));
+                Points = SerializePoints(gridPoints);
             }
         }
 
@@ -524,7 +603,7 @@ namespace TemplateControl
 
                 var newPoint = new Point(last.X + dir.X, last.Y + dir.Y);
                 gridPoints.Add(newPoint);
-                Points = string.Join(";", gridPoints.Select(p => string.Format(CultureInfo.InvariantCulture, "{0:0.##},{1:0.##}", p.X, p.Y)));
+                Points = SerializePoints(gridPoints);
             }
         }
 
@@ -534,23 +613,60 @@ namespace TemplateControl
             if (gridPoints.Count > 2 && index >= 0 && index < gridPoints.Count)
             {
                 gridPoints.RemoveAt(index);
-                Points = string.Join(";", gridPoints.Select(p => string.Format(CultureInfo.InvariantCulture, "{0:0.##},{1:0.##}", p.X, p.Y)));
+                Points = SerializePoints(gridPoints);
             }
         }
 
-        private List<Point> ParsePoints(string pointsStr)
+        #endregion
+
+        #region Utilities
+
+        private static double GetSegmentAngle(Point p1, Point p2)
+        {
+            return Math.Atan2(p2.Y - p1.Y, p2.X - p1.X);
+        }
+
+        private static Color LightenColor(Color color, double factor)
+        {
+            return Color.FromRgb(
+                (byte)Math.Min(255, color.R + (255 - color.R) * factor),
+                (byte)Math.Min(255, color.G + (255 - color.G) * factor),
+                (byte)Math.Min(255, color.B + (255 - color.B) * factor)
+            );
+        }
+
+        private static Color DarkenColor(Color color, double factor)
+        {
+            return Color.FromRgb(
+                (byte)(color.R * (1 - factor)),
+                (byte)(color.G * (1 - factor)),
+                (byte)(color.B * (1 - factor))
+            );
+        }
+
+        private static List<Point> ParsePoints(string pointsStr)
         {
             var list = new List<Point>();
             var segments = pointsStr.Split(';', StringSplitOptions.RemoveEmptyEntries);
             foreach (var seg in segments)
             {
                 var parts = seg.Split(',', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length == 2 && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double x) && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double y))
+                if (parts.Length == 2 &&
+                    double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double x) &&
+                    double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double y))
                 {
                     list.Add(new Point(x, y));
                 }
             }
             return list;
         }
+
+        private static string SerializePoints(List<Point> points)
+        {
+            return string.Join(";", points.Select(p =>
+                string.Format(CultureInfo.InvariantCulture, "{0:0.##},{1:0.##}", p.X, p.Y)));
+        }
+
+        #endregion
     }
 }

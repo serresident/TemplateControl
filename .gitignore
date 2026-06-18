@@ -1,0 +1,17 @@
+# Dependencies
+**/bin/
+**/obj/
+**/*.vs/
+
+# Build artifacts
+**/binaries/
+**/*.exe
+**/*.dll
+**/*.pdb
+**/*.nupkg
+**/*.symbols.nupkg
+
+# Avalonia
+**/bin/Debug/**/refs/**
+
+

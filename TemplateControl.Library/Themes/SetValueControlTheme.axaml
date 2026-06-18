@@ -1,0 +1,161 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="using:TemplateControl"
+                    xmlns:sys="using:System">
+
+    <ControlTheme x:Key="{x:Type local:SetValueControl}" TargetType="local:SetValueControl">
+        
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="MinHeight" Value="150" />
+
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}">
+                    
+                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*">
+                        
+                        <!-- Header: Values & Numpad Toggle -->
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+                            <StackPanel Grid.Column="0" Orientation="Vertical">
+                                <TextBlock Text="SETPOINT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" LetterSpacing="1.5" />
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                                    <TextBlock Text="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, StringFormat={}{0:F2}}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" x:Name="TargetValueDisplay" />
+                                    <TextBlock Text="{Binding CurrentValue, RelativeSource={RelativeSource TemplatedParent}, StringFormat={}Cur: {0:F2}}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorTertiaryBrush}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Button Grid.Column="1" x:Name="PART_NumPadToggle" Width="40" Height="40" VerticalAlignment="Top" AutomationProperties.Name="Open Numeric Pad">
+                                <TextBlock Text="🔢" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Button>
+                        </Grid>
+
+                        <!-- Slider and Steppers -->
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,16">
+                            <Button Grid.Column="0" x:Name="PART_DecreaseBtn" Content="-" Width="40" Height="40" FontSize="20" FontWeight="Bold" AutomationProperties.Name="Decrease Value" />
+                            
+                            <Slider Grid.Column="1" x:Name="PART_Track" 
+                                    Margin="16,0" VerticalAlignment="Center"
+                                    Minimum="{TemplateBinding Minimum}" 
+                                    Maximum="{TemplateBinding Maximum}" 
+                                    Value="{TemplateBinding Value}" />
+                                    
+                            <Button Grid.Column="2" x:Name="PART_IncreaseBtn" Content="+" Width="40" Height="40" FontSize="20" FontWeight="Bold" AutomationProperties.Name="Increase Value" />
+                        </Grid>
+
+                        <!-- Quick Set & Recommendations -->
+                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                            <!-- Recent values -->
+                            <ItemsControl x:Name="PART_QuickSetPanel" ItemsSource="{TemplateBinding RecentValues}" Grid.Column="0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="sys:Decimal">
+                                        <Button Content="{Binding StringFormat={}{0:F1}}" 
+                                                CommandParameter="{Binding}"
+                                                Margin="0,0,8,0"
+                                                Padding="12,6"
+                                                CornerRadius="16"
+                                                FontSize="12"
+                                                Background="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Recommended Value -->
+                            <Button Grid.Column="1" 
+                                    x:Name="RecommendedBtn"
+                                    IsVisible="{TemplateBinding RecommendedValue, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                    CommandParameter="{TemplateBinding RecommendedValue}"
+                                    CornerRadius="16"
+                                    Padding="12,6"
+                                    Background="#1A00FF66"
+                                    BorderBrush="#00FF66"
+                                    BorderThickness="1"
+                                    AutomationProperties.Name="Set Recommended Value">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="💡" FontSize="12" />
+                                    <TextBlock Text="{Binding RecommendedValue, RelativeSource={RelativeSource TemplatedParent}, StringFormat={}{0:F1}}" FontSize="12" FontWeight="Bold" Foreground="#00FF66" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <!-- Confirm Overlay (Hidden by default) -->
+                        <Border Grid.Row="0" Grid.RowSpan="3" x:Name="PART_ConfirmOverlay" 
+                                Background="#E61E1E22" CornerRadius="8" 
+                                IsVisible="False" Padding="20">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+                                <TextBlock Text="⚠️ CRITICAL CHANGE REQUESTED" Foreground="#FFD700" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" />
+                                <TextBlock Text="Please confirm the new setpoint." Foreground="#FFFFFF" HorizontalAlignment="Center" />
+                                <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Center" Margin="0,8,0,0">
+                                    <Button x:Name="PART_CancelBtn" Content="CANCEL" Width="100" HorizontalContentAlignment="Center" />
+                                    <Button x:Name="PART_ConfirmBtn" Content="CONFIRM" Width="100" HorizontalContentAlignment="Center" Background="#B2FFD700" Foreground="Black" FontWeight="Bold" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Numeric Pad Popup -->
+                        <Popup x:Name="PART_NumPadPopup" 
+                               PlacementTarget="PART_NumPadToggle" 
+                               Placement="BottomEdgeAlignedRight" 
+                               IsLightDismissEnabled="True">
+                            <Border Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" 
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+                                    BorderThickness="1" CornerRadius="8" Padding="10"
+                                    BoxShadow="0 8 16 0 #40000000">
+                                <local:NumericPad Minimum="{TemplateBinding Minimum}" 
+                                                  Maximum="{TemplateBinding Maximum}" 
+                                                  ShowDecimalSeparator="True" />
+                            </Border>
+                        </Popup>
+
+                    </Grid>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+
+        <!-- PseudoClass states -->
+        
+        <!-- :numpad-open highlights the toggle button -->
+        <Style Selector="^:numpad-open /template/ Button#PART_NumPadToggle">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+
+        <!-- :warning shows the confirm overlay and adds border glow -->
+        <Style Selector="^:warning /template/ Border#PART_ConfirmOverlay">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="^:warning">
+            <Setter Property="BorderBrush" Value="#FFD700" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+
+        <!-- :error flashes the target value display red -->
+        <Style Selector="^:error /template/ TextBlock#TargetValueDisplay">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+        </Style>
+        <Style Selector="^:error">
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+        </Style>
+
+        <!-- :auto-precision adds visual cue to track or buttons -->
+        <Style Selector="^:auto-precision /template/ Button#PART_DecreaseBtn">
+            <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+        <Style Selector="^:auto-precision /template/ Button#PART_IncreaseBtn">
+            <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+
+    </ControlTheme>
+
+</ResourceDictionary>

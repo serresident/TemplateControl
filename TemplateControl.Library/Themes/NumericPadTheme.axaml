@@ -1,0 +1,155 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="using:TemplateControl">
+
+    <!-- NumericPad ControlTheme -->
+    <ControlTheme x:Key="{x:Type local:NumericPad}" TargetType="local:NumericPad">
+
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontFamily" Value="{DynamicResource ContentControlThemeFontFamily}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextControlForeground}" />
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+        <Setter Property="Width" Value="280" />
+
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="8">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+                        <!-- Row 0: Min/Max display -->
+                        <Grid Grid.Row="0" ColumnDefinitions="*,*" Margin="0,0,0,4">
+                            <TextBlock Grid.Column="0"
+                                       FontSize="10"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       HorizontalAlignment="Left">
+                                <Run Text="Min: " />
+                                <Run Text="{TemplateBinding Minimum}" />
+                            </TextBlock>
+                            <TextBlock Grid.Column="1"
+                                       FontSize="10"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       HorizontalAlignment="Right">
+                                <Run Text="Max: " />
+                                <Run Text="{TemplateBinding Maximum}" />
+                            </TextBlock>
+                        </Grid>
+
+                        <!-- Row 1: Display -->
+                        <Border Grid.Row="1"
+                                Background="{DynamicResource TextControlBackground}"
+                                BorderBrush="{DynamicResource TextControlBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="12,8"
+                                Margin="0,0,0,8"
+                                MinHeight="48">
+                            <TextBlock x:Name="PART_Display"
+                                       FontSize="24"
+                                       FontWeight="SemiBold"
+                                       FontFamily="{DynamicResource ContentControlThemeFontFamily}"
+                                       Foreground="{DynamicResource TextControlForeground}"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       Text=""
+                                       AutomationProperties.Name="Дисплей числового ввода" />
+                        </Border>
+
+                        <!-- Row 2: Digit Grid -->
+                        <Grid Grid.Row="2" RowDefinitions="*,*,*,*" ColumnDefinitions="*,*,*">
+                            <Grid.Styles>
+                                <Style Selector="Button">
+                                    <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                    <Setter Property="VerticalAlignment" Value="Stretch" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                    <Setter Property="VerticalContentAlignment" Value="Center" />
+                                    <Setter Property="FontSize" Value="20" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Margin" Value="2" />
+                                    <Setter Property="MinHeight" Value="48" />
+                                    <Setter Property="CornerRadius" Value="4" />
+                                </Style>
+                            </Grid.Styles>
+
+                            <!-- Row 0: 7 8 9 -->
+                            <Button Grid.Row="0" Grid.Column="0" Content="7" CommandParameter="7"
+                                    AutomationProperties.Name="Цифра 7" />
+                            <Button Grid.Row="0" Grid.Column="1" Content="8" CommandParameter="8"
+                                    AutomationProperties.Name="Цифра 8" />
+                            <Button Grid.Row="0" Grid.Column="2" Content="9" CommandParameter="9"
+                                    AutomationProperties.Name="Цифра 9" />
+
+                            <!-- Row 1: 4 5 6 -->
+                            <Button Grid.Row="1" Grid.Column="0" Content="4" CommandParameter="4"
+                                    AutomationProperties.Name="Цифра 4" />
+                            <Button Grid.Row="1" Grid.Column="1" Content="5" CommandParameter="5"
+                                    AutomationProperties.Name="Цифра 5" />
+                            <Button Grid.Row="1" Grid.Column="2" Content="6" CommandParameter="6"
+                                    AutomationProperties.Name="Цифра 6" />
+
+                            <!-- Row 2: 1 2 3 -->
+                            <Button Grid.Row="2" Grid.Column="0" Content="1" CommandParameter="1"
+                                    AutomationProperties.Name="Цифра 1" />
+                            <Button Grid.Row="2" Grid.Column="1" Content="2" CommandParameter="2"
+                                    AutomationProperties.Name="Цифра 2" />
+                            <Button Grid.Row="2" Grid.Column="2" Content="3" CommandParameter="3"
+                                    AutomationProperties.Name="Цифра 3" />
+
+                            <!-- Row 3: . 0 ⌫ -->
+                            <Button Grid.Row="3" Grid.Column="0"
+                                    x:Name="PART_DecimalButton"
+                                    Content="."
+                                    AutomationProperties.Name="Десятичный разделитель" />
+                            <Button Grid.Row="3" Grid.Column="1" Content="0" CommandParameter="0"
+                                    AutomationProperties.Name="Цифра 0" />
+                            <Button Grid.Row="3" Grid.Column="2"
+                                    x:Name="PART_BackspaceButton"
+                                    Content="⌫"
+                                    AutomationProperties.Name="Удалить последний символ" />
+                        </Grid>
+
+                        <!-- Row 3: Clear + Submit -->
+                        <Grid Grid.Row="3" ColumnDefinitions="2*,*" Margin="0,4,0,0">
+                            <Button Grid.Column="0"
+                                    x:Name="PART_ClearButton"
+                                    Content="CLEAR"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    FontWeight="SemiBold"
+                                    MinHeight="48"
+                                    Margin="2"
+                                    CornerRadius="4"
+                                    AutomationProperties.Name="Очистить ввод" />
+                            <Button Grid.Column="1"
+                                    x:Name="PART_SubmitButton"
+                                    Content="OK"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    FontWeight="Bold"
+                                    MinHeight="48"
+                                    Margin="2"
+                                    CornerRadius="4"
+                                    Classes="accent"
+                                    AutomationProperties.Name="Подтвердить ввод" />
+                        </Grid>
+                    </Grid>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+
+        <!-- PseudoClass: :error — red foreground on PART_Display -->
+        <Style Selector="^:error /template/ TextBlock#PART_Display">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+        </Style>
+
+        <!-- PseudoClass: :empty — dimmed display -->
+        <Style Selector="^:empty /template/ TextBlock#PART_Display">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+
+    </ControlTheme>
+
+</ResourceDictionary>
