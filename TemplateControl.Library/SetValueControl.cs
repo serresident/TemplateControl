@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Metadata;
@@ -9,6 +11,12 @@ using Avalonia.Threading;
 
 namespace TemplateControl
 {
+    public enum SetValueDisplayMode
+    {
+        Full,
+        Minimal
+    }
+
     /// <summary>
     /// An intelligent setpoint controller supporting adaptive step, safe zones,
     /// critical change confirmation, and numeric pad integration.
@@ -19,14 +27,20 @@ namespace TemplateControl
     [TemplatePart("PART_Track", typeof(RangeBase))]
     [TemplatePart("PART_DecreaseBtn", typeof(Button))]
     [TemplatePart("PART_IncreaseBtn", typeof(Button))]
+    [TemplatePart("PART_ApplyTrackBtn", typeof(Button))]
     [TemplatePart("PART_ConfirmOverlay", typeof(Border))]
     [TemplatePart("PART_ConfirmBtn", typeof(Button))]
     [TemplatePart("PART_CancelBtn", typeof(Button))]
     [TemplatePart("PART_NumPadToggle", typeof(Button))]
-    [PseudoClasses(":numpad-open", ":warning", ":error", ":auto-precision", ":has-recommendation")]
+    [PseudoClasses(":numpad-open", ":warning", ":error", ":auto-precision", ":has-recommendation", ":mode-minimal", ":track-dirty")]
     public class SetValueControl : TemplatedControl
     {
         #region Styled Properties
+
+        public static readonly StyledProperty<SetValueDisplayMode> DisplayModeProperty =
+            AvaloniaProperty.Register<SetValueControl, SetValueDisplayMode>(
+                nameof(DisplayMode),
+                defaultValue: SetValueDisplayMode.Full);
 
         public static readonly StyledProperty<decimal> ValueProperty =
             AvaloniaProperty.Register<SetValueControl, decimal>(
@@ -62,6 +76,16 @@ namespace TemplateControl
                 nameof(SafeMaximum),
                 defaultValue: 100m,
                 coerce: CoerceSafeMaximum);
+
+        public static readonly StyledProperty<bool> SafeZonesEnabledProperty =
+            AvaloniaProperty.Register<SetValueControl, bool>(
+                nameof(SafeZonesEnabled),
+                defaultValue: true);
+
+        public static readonly StyledProperty<bool> CriticalJumpWarningEnabledProperty =
+            AvaloniaProperty.Register<SetValueControl, bool>(
+                nameof(CriticalJumpWarningEnabled),
+                defaultValue: true);
 
         public static readonly StyledProperty<decimal> StepProperty =
             AvaloniaProperty.Register<SetValueControl, decimal>(
@@ -111,6 +135,12 @@ namespace TemplateControl
 
         #region Property Accessors
 
+        public SetValueDisplayMode DisplayMode
+        {
+            get => GetValue(DisplayModeProperty);
+            set => SetValue(DisplayModeProperty, value);
+        }
+
         public decimal Value
         {
             get => GetValue(ValueProperty);
@@ -145,6 +175,18 @@ namespace TemplateControl
         {
             get => GetValue(SafeMaximumProperty);
             set => SetValue(SafeMaximumProperty, value);
+        }
+
+        public bool SafeZonesEnabled
+        {
+            get => GetValue(SafeZonesEnabledProperty);
+            set => SetValue(SafeZonesEnabledProperty, value);
+        }
+
+        public bool CriticalJumpWarningEnabled
+        {
+            get => GetValue(CriticalJumpWarningEnabledProperty);
+            set => SetValue(CriticalJumpWarningEnabledProperty, value);
         }
 
         public decimal Step
@@ -227,6 +269,7 @@ namespace TemplateControl
         private RangeBase? _track;
         private Button? _decreaseBtn;
         private Button? _increaseBtn;
+        private Button? _applyTrackBtn;
         private Border? _confirmOverlay;
         private Button? _confirmBtn;
         private Button? _cancelBtn;
@@ -236,15 +279,21 @@ namespace TemplateControl
 
         #region Internal State
 
-        private decimal _pendingValue;
+        private decimal _pendingValue; // for the critical change overlay
+        private decimal _pendingTrackValue; // for the slider before clicking apply
         private DispatcherTimer? _errorTimer;
         private bool _isSliderUpdating;
 
         #endregion
 
+        private ObservableCollection<decimal>? _internalJournal;
+
         public SetValueControl()
         {
             UpdatePseudoClasses();
+            
+            _internalJournal = new ObservableCollection<decimal>();
+            RecentValues = _internalJournal;
         }
 
         protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
@@ -258,6 +307,7 @@ namespace TemplateControl
             _track = e.NameScope.Find<RangeBase>("PART_Track");
             _decreaseBtn = e.NameScope.Find<Button>("PART_DecreaseBtn");
             _increaseBtn = e.NameScope.Find<Button>("PART_IncreaseBtn");
+            _applyTrackBtn = e.NameScope.Find<Button>("PART_ApplyTrackBtn");
             _confirmOverlay = e.NameScope.Find<Border>("PART_ConfirmOverlay");
             _confirmBtn = e.NameScope.Find<Button>("PART_ConfirmBtn");
             _cancelBtn = e.NameScope.Find<Button>("PART_CancelBtn");
@@ -271,6 +321,7 @@ namespace TemplateControl
 
             if (_decreaseBtn != null) _decreaseBtn.Click += OnDecreaseClick;
             if (_increaseBtn != null) _increaseBtn.Click += OnIncreaseClick;
+            if (_applyTrackBtn != null) _applyTrackBtn.Click += OnApplyTrackClick;
             if (_confirmBtn != null) _confirmBtn.Click += OnConfirmClick;
             if (_cancelBtn != null) _cancelBtn.Click += OnCancelClick;
             if (_numPadToggle != null) _numPadToggle.Click += OnNumPadToggleClick;
@@ -280,6 +331,7 @@ namespace TemplateControl
                 _track.Minimum = (double)Minimum;
                 _track.Maximum = (double)Maximum;
                 _track.Value = (double)Value;
+                _pendingTrackValue = Value;
                 _track.ValueChanged += OnTrackValueChanged;
             }
 
@@ -294,6 +346,7 @@ namespace TemplateControl
         {
             if (_decreaseBtn != null) _decreaseBtn.Click -= OnDecreaseClick;
             if (_increaseBtn != null) _increaseBtn.Click -= OnIncreaseClick;
+            if (_applyTrackBtn != null) _applyTrackBtn.Click -= OnApplyTrackClick;
             if (_confirmBtn != null) _confirmBtn.Click -= OnConfirmClick;
             if (_cancelBtn != null) _cancelBtn.Click -= OnCancelClick;
             if (_numPadToggle != null) _numPadToggle.Click -= OnNumPadToggleClick;
@@ -319,6 +372,8 @@ namespace TemplateControl
                 {
                     _isSliderUpdating = true;
                     _track.Value = (double)newVal;
+                    _pendingTrackValue = newVal;
+                    PseudoClasses.Set(":track-dirty", false);
                     _isSliderUpdating = false;
                 }
 
@@ -341,6 +396,10 @@ namespace TemplateControl
             {
                 PseudoClasses.Set(":has-recommendation", RecommendedValue.HasValue);
             }
+            else if (change.Property == DisplayModeProperty)
+            {
+                PseudoClasses.Set(":mode-minimal", DisplayMode == SetValueDisplayMode.Minimal);
+            }
         }
 
         #region User Interaction
@@ -348,14 +407,48 @@ namespace TemplateControl
         private void OnDecreaseClick(object? sender, RoutedEventArgs e)
         {
             decimal step = CalculateCurrentStep();
-            TryProposeValue(Value - step);
+            UpdateTrackPendingValue(_pendingTrackValue - step);
             e.Handled = true;
         }
 
         private void OnIncreaseClick(object? sender, RoutedEventArgs e)
         {
             decimal step = CalculateCurrentStep();
-            TryProposeValue(Value + step);
+            UpdateTrackPendingValue(_pendingTrackValue + step);
+            e.Handled = true;
+        }
+        
+        private void UpdateTrackPendingValue(decimal val)
+        {
+            if (val < Minimum) val = Minimum;
+            if (val > Maximum) val = Maximum;
+            
+            _pendingTrackValue = val;
+            
+            if (_track != null)
+            {
+                _isSliderUpdating = true;
+                _track.Value = (double)_pendingTrackValue;
+                _isSliderUpdating = false;
+            }
+            
+            PseudoClasses.Set(":track-dirty", _pendingTrackValue != Value);
+        }
+
+        private void OnTrackValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
+        {
+            if (_isSliderUpdating) return;
+
+            // Slider sets double, convert to decimal, but do not apply yet!
+            decimal val = (decimal)e.NewValue;
+            _pendingTrackValue = val;
+            PseudoClasses.Set(":track-dirty", _pendingTrackValue != Value);
+        }
+        
+        private void OnApplyTrackClick(object? sender, RoutedEventArgs e)
+        {
+            TryProposeValue(_pendingTrackValue);
+            PseudoClasses.Set(":track-dirty", false);
             e.Handled = true;
         }
 
@@ -366,15 +459,6 @@ namespace TemplateControl
                 _numPadPopup.IsOpen = !_numPadPopup.IsOpen;
             }
             e.Handled = true;
-        }
-
-        private void OnTrackValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
-        {
-            if (_isSliderUpdating) return;
-
-            // Slider sets double, convert to decimal
-            decimal val = (decimal)e.NewValue;
-            TryProposeValue(val);
         }
 
         private void OnNumericPadSubmit(object? sender, RoutedEventArgs e)
@@ -437,23 +521,37 @@ namespace TemplateControl
                 return;
             }
 
+            if (DisplayMode == SetValueDisplayMode.Minimal)
+            {
+                // In Minimal mode, bypass Safe zones and jump warnings completely
+                ApplyValue(val);
+                return;
+            }
+
             _pendingValue = val;
 
-            bool isUnsafe = val < SafeMinimum || val > SafeMaximum;
+            bool isUnsafe = false;
+            if (SafeZonesEnabled)
+            {
+                isUnsafe = val < SafeMinimum || val > SafeMaximum;
+            }
             
             // Check if jump is > 20%
             bool isBigJump = false;
             double changePercent = 0;
-            if (CurrentValue != 0)
+            if (CriticalJumpWarningEnabled)
             {
-                changePercent = Math.Abs((double)(val - CurrentValue) / (double)CurrentValue);
-                if (changePercent > 0.2) isBigJump = true;
-            }
-            else if (val != 0)
-            {
-                 // if CurrentValue is 0, any change is theoretically infinite %, treat as big jump
-                 isBigJump = true;
-                 changePercent = 1.0; 
+                if (CurrentValue != 0)
+                {
+                    changePercent = Math.Abs((double)(val - CurrentValue) / (double)CurrentValue);
+                    if (changePercent > 0.2) isBigJump = true;
+                }
+                else if (val != 0)
+                {
+                     // if CurrentValue is 0, any change is theoretically infinite %, treat as big jump
+                     isBigJump = true;
+                     changePercent = 1.0; 
+                }
             }
 
             if (isUnsafe || isBigJump)
@@ -463,29 +561,38 @@ namespace TemplateControl
             else
             {
                 // Safe, apply directly
-                Value = val;
-                
-                // Sync back slider if proposed value was not from slider
-                if (_track != null)
-                {
-                    _isSliderUpdating = true;
-                    _track.Value = (double)Value;
-                    _isSliderUpdating = false;
-                }
+                ApplyValue(val);
+            }
+        }
+        
+        private void ApplyValue(decimal val)
+        {
+            Value = val;
+
+            if (_internalJournal != null)
+            {
+                if (_internalJournal.Contains(val))
+                    _internalJournal.Remove(val);
+                _internalJournal.Insert(0, val);
+                if (_internalJournal.Count > 5)
+                    _internalJournal.RemoveAt(5);
+            }
+            
+            // Sync back slider if proposed value was not from slider
+            if (_track != null)
+            {
+                _isSliderUpdating = true;
+                _pendingTrackValue = val;
+                _track.Value = (double)Value;
+                PseudoClasses.Set(":track-dirty", false);
+                _isSliderUpdating = false;
             }
         }
 
         private void OnConfirmClick(object? sender, RoutedEventArgs e)
         {
-            Value = _pendingValue;
+            ApplyValue(_pendingValue);
             PseudoClasses.Set(":warning", false);
-            
-            if (_track != null)
-            {
-                _isSliderUpdating = true;
-                _track.Value = (double)Value;
-                _isSliderUpdating = false;
-            }
             e.Handled = true;
         }
 
@@ -496,7 +603,9 @@ namespace TemplateControl
             if (_track != null)
             {
                 _isSliderUpdating = true;
+                _pendingTrackValue = Value;
                 _track.Value = (double)Value;
+                PseudoClasses.Set(":track-dirty", false);
                 _isSliderUpdating = false;
             }
             e.Handled = true;
@@ -526,6 +635,7 @@ namespace TemplateControl
         {
             PseudoClasses.Set(":auto-precision", AdaptiveStepEnabled);
             PseudoClasses.Set(":has-recommendation", RecommendedValue.HasValue);
+            PseudoClasses.Set(":mode-minimal", DisplayMode == SetValueDisplayMode.Minimal);
         }
 
         #endregion

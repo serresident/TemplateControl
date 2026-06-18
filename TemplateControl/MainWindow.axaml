@@ -182,7 +182,7 @@
                     <!-- Content -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="24">
                         
-                        <TextBlock Text="TANK #4 TEMPERATURE SETPOINT" Foreground="#A9A9B2" FontSize="14" FontWeight="Bold" LetterSpacing="2" HorizontalAlignment="Center" />
+                        <TextBlock Text="TANK #4 TEMPERATURE SETPOINT (FULL MODE)" Foreground="#A9A9B2" FontSize="14" FontWeight="Bold" LetterSpacing="2" HorizontalAlignment="Center" />
 
                         <hmi:SetValueControl x:Name="DemoSetValueControl" 
                                              Width="500"
@@ -191,6 +191,17 @@
                                              Value="72.5" CurrentValue="72.5"
                                              RecommendedValue="77.3"
                                              AdaptiveStepEnabled="True"
+                                             ValueChanged="OnSetValueChanged"
+                                             CriticalChangeRequested="OnCriticalChangeRequested" />
+
+                        <TextBlock Text="TANK #5 PRESSURE SETPOINT (MINIMAL MODE)" Foreground="#A9A9B2" FontSize="14" FontWeight="Bold" LetterSpacing="2" HorizontalAlignment="Center" Margin="0,16,0,0" />
+
+                        <hmi:SetValueControl x:Name="MinimalSetValueControl" 
+                                             Width="300"
+                                             DisplayMode="Minimal"
+                                             Minimum="0" Maximum="100" 
+                                             SafeMinimum="10" SafeMaximum="90" 
+                                             Value="45.0" CurrentValue="45.0"
                                              ValueChanged="OnSetValueChanged"
                                              CriticalChangeRequested="OnCriticalChangeRequested" />
 
