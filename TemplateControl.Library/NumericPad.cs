@@ -27,12 +27,11 @@ namespace TemplateControl
 
     /// <summary>
     /// A lookless numeric keypad control for touch/terminal input scenarios (POS, SCADA terminals).
-    /// Provides digit buttons, decimal separator, backspace, clear and submit functionality.
-    /// All visual representation is defined entirely through <see cref="ControlTemplate"/>.
-    /// </summary>
     [TemplatePart("PART_CancelButton", typeof(Button))]
     [TemplatePart("PART_Display", typeof(TextBlock))]
     [TemplatePart("PART_ClearButton", typeof(Button))]
+    [TemplatePart("PART_BackspaceButton", typeof(Button))]
+    [TemplatePart("PART_SubmitButton", typeof(Button))]
     [TemplatePart("PART_DecimalButton", typeof(Button))]
     [PseudoClasses(":error", ":empty")]
     public class NumericPad : TemplatedControl

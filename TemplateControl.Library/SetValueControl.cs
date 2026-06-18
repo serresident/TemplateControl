@@ -8,6 +8,7 @@ using Avalonia.Controls.Metadata;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.Input;
 
 namespace TemplateControl
 {
@@ -32,7 +33,10 @@ namespace TemplateControl
     [TemplatePart("PART_ConfirmBtn", typeof(Button))]
     [TemplatePart("PART_CancelBtn", typeof(Button))]
     [TemplatePart("PART_NumPadToggle", typeof(Button))]
-    [PseudoClasses(":numpad-open", ":warning", ":error", ":auto-precision", ":has-recommendation", ":mode-minimal", ":track-dirty")]
+    [TemplatePart("PART_ValueInput", typeof(TextBox))]
+    [TemplatePart("PART_ValueDisplayArea", typeof(Panel))]
+    [TemplatePart("PART_ConfirmInputBtn", typeof(Button))]
+    [PseudoClasses(":numpad-open", ":warning", ":error", ":auto-precision", ":has-recommendation", ":mode-minimal", ":track-dirty", ":editing")]
     public class SetValueControl : TemplatedControl
     {
         #region Styled Properties
@@ -292,6 +296,9 @@ namespace TemplateControl
         private Button? _confirmBtn;
         private Button? _cancelBtn;
         private Button? _numPadToggle;
+        private TextBox? _valueInput;
+        private Panel? _valueDisplayArea;
+        private Button? _confirmInputBtn;
 
         #endregion
 
@@ -330,6 +337,9 @@ namespace TemplateControl
             _confirmBtn = e.NameScope.Find<Button>("PART_ConfirmBtn");
             _cancelBtn = e.NameScope.Find<Button>("PART_CancelBtn");
             _numPadToggle = e.NameScope.Find<Button>("PART_NumPadToggle");
+            _valueInput = e.NameScope.Find<TextBox>("PART_ValueInput");
+            _valueDisplayArea = e.NameScope.Find<Panel>("PART_ValueDisplayArea");
+            _confirmInputBtn = e.NameScope.Find<Button>("PART_ConfirmInputBtn");
 
             if (_numPadPopup != null)
             {
@@ -343,6 +353,19 @@ namespace TemplateControl
             if (_confirmBtn != null) _confirmBtn.Click += OnConfirmClick;
             if (_cancelBtn != null) _cancelBtn.Click += OnCancelClick;
             if (_numPadToggle != null) _numPadToggle.Click += OnNumPadToggleClick;
+
+            if (_valueDisplayArea != null)
+                _valueDisplayArea.DoubleTapped += OnValueDisplayDoubleTapped;
+
+            if (_confirmInputBtn != null)
+                _confirmInputBtn.Click += OnConfirmInputBtnClick;
+
+            if (_valueInput != null)
+            {
+                _valueInput.KeyDown += OnValueInputKeyDown;
+                _valueInput.LostFocus += OnValueInputLostFocus;
+                _valueInput.AddHandler(InputElement.TextInputEvent, OnValueInputTextInput, RoutingStrategies.Tunnel);
+            }
 
             if (_track != null)
             {
@@ -369,6 +392,19 @@ namespace TemplateControl
             if (_confirmBtn != null) _confirmBtn.Click -= OnConfirmClick;
             if (_cancelBtn != null) _cancelBtn.Click -= OnCancelClick;
             if (_numPadToggle != null) _numPadToggle.Click -= OnNumPadToggleClick;
+
+            if (_valueDisplayArea != null)
+                _valueDisplayArea.DoubleTapped -= OnValueDisplayDoubleTapped;
+
+            if (_confirmInputBtn != null)
+                _confirmInputBtn.Click -= OnConfirmInputBtnClick;
+
+            if (_valueInput != null)
+            {
+                _valueInput.KeyDown -= OnValueInputKeyDown;
+                _valueInput.LostFocus -= OnValueInputLostFocus;
+                _valueInput.RemoveHandler(InputElement.TextInputEvent, OnValueInputTextInput);
+            }
 
             if (_track != null) _track.ValueChanged -= OnTrackValueChanged;
 
@@ -423,6 +459,79 @@ namespace TemplateControl
         }
 
         #region User Interaction
+
+        private void OnValueDisplayDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+        {
+            if (_valueInput != null)
+            {
+                PseudoClasses.Set(":editing", true);
+                _valueInput.Text = Value.ToString(System.Globalization.CultureInfo.CurrentCulture);
+                _valueInput.Focus();
+                _valueInput.SelectAll();
+                e.Handled = true;
+            }
+        }
+
+        private void OnValueInputKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+        {
+            if (e.Key == Avalonia.Input.Key.Enter || e.Key == Avalonia.Input.Key.Return)
+            {
+                CommitValueInput();
+                e.Handled = true;
+            }
+            else if (e.Key == Avalonia.Input.Key.Escape)
+            {
+                PseudoClasses.Set(":editing", false);
+                e.Handled = true;
+            }
+        }
+
+        private void OnValueInputLostFocus(object? sender, RoutedEventArgs e)
+        {
+            // We shouldn't auto-commit on lost focus if they clicked the confirm button, 
+            // but CommitValueInput handles double calls safely.
+            CommitValueInput();
+        }
+
+        private void OnConfirmInputBtnClick(object? sender, RoutedEventArgs e)
+        {
+            CommitValueInput();
+            e.Handled = true;
+        }
+
+        private void OnValueInputTextInput(object? sender, Avalonia.Input.TextInputEventArgs e)
+        {
+            if (string.IsNullOrEmpty(e.Text)) return;
+
+            string allowedChars = "0123456789.,-";
+            foreach (char c in e.Text)
+            {
+                if (!allowedChars.Contains(c))
+                {
+                    e.Handled = true;
+                    break;
+                }
+            }
+        }
+
+        private void CommitValueInput()
+        {
+            if (!PseudoClasses.Contains(":editing")) return;
+            PseudoClasses.Set(":editing", false);
+
+            if (_valueInput != null && !string.IsNullOrWhiteSpace(_valueInput.Text))
+            {
+                string text = _valueInput.Text.Replace(',', '.');
+                if (decimal.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal parsed))
+                {
+                    parsed = Math.Round(parsed, DecimalPlaces, MidpointRounding.AwayFromZero);
+                    if (parsed < Minimum) parsed = Minimum;
+                    if (parsed > Maximum) parsed = Maximum;
+
+                    TryProposeValue(parsed);
+                }
+            }
+        }
 
         private void OnDecreaseClick(object? sender, RoutedEventArgs e)
         {

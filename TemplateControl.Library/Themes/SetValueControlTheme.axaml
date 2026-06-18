@@ -54,16 +54,42 @@
                                 </Border>
                                 
                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
-                                    <TextBlock Text="{Binding #PART_Track.Value, StringFormat={}{0:F2}}" FontSize="32" FontWeight="Bold" x:Name="TargetValueDisplay">
-                                        <TextBlock.Foreground>
-                                            <MultiBinding Converter="{StaticResource SafeZoneColor}">
-                                                <Binding Path="#PART_Track.Value" />
-                                                <Binding Path="SafeMinimum" RelativeSource="{RelativeSource TemplatedParent}" />
-                                                <Binding Path="SafeMaximum" RelativeSource="{RelativeSource TemplatedParent}" />
-                                                <Binding Path="SafeZonesEnabled" RelativeSource="{RelativeSource TemplatedParent}" />
-                                            </MultiBinding>
-                                        </TextBlock.Foreground>
-                                    </TextBlock>
+                                    <Panel x:Name="PART_ValueDisplayArea" Background="Transparent" Cursor="Hand" ToolTip.Tip="Дважды кликните для ввода">
+                                        <TextBlock Text="{Binding #PART_Track.Value, StringFormat={}{0:F2}}" FontSize="32" FontWeight="Bold" x:Name="TargetValueDisplay" VerticalAlignment="Center">
+                                            <TextBlock.Foreground>
+                                                <MultiBinding Converter="{StaticResource SafeZoneColor}">
+                                                    <Binding Path="#PART_Track.Value" />
+                                                    <Binding Path="SafeMinimum" RelativeSource="{RelativeSource TemplatedParent}" />
+                                                    <Binding Path="SafeMaximum" RelativeSource="{RelativeSource TemplatedParent}" />
+                                                    <Binding Path="SafeZonesEnabled" RelativeSource="{RelativeSource TemplatedParent}" />
+                                                </MultiBinding>
+                                            </TextBlock.Foreground>
+                                        </TextBlock>
+                                        
+                                        <StackPanel x:Name="PART_EditPanel" Orientation="Horizontal" Spacing="4" IsVisible="False" VerticalAlignment="Center">
+                                            <TextBox x:Name="PART_ValueInput" 
+                                                     FontSize="32" FontWeight="Bold" 
+                                                     VerticalAlignment="Center" 
+                                                     HorizontalAlignment="Left"
+                                                     Background="#222228"
+                                                     Foreground="#FFFFFF"
+                                                     BorderThickness="1"
+                                                     BorderBrush="#4488FF"
+                                                     CornerRadius="4"
+                                                     Padding="4,0"
+                                                     Width="150"/>
+                                            <Button x:Name="PART_ConfirmInputBtn"
+                                                    Width="42" Height="42"
+                                                    Padding="0"
+                                                    Background="#4488FF"
+                                                    Foreground="White"
+                                                    VerticalAlignment="Center"
+                                                    CornerRadius="4"
+                                                    AutomationProperties.Name="Подтвердить ввод">
+                                                <TextBlock Text="✓" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Panel>
                                     
                                     <!-- Тек: Label with Blue Outline and Value -->
                                     <StackPanel x:Name="PART_CurrentValueDisplay" Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom" Margin="0,0,0,6">
@@ -253,6 +279,15 @@
         <Style Selector="^:mode-minimal /template/ StackPanel#PART_CurrentValueDisplay">
             <Setter Property="IsVisible" Value="False" />
         </Style>
+
+        <!-- Editing Mode Styles -->
+        <Style Selector="^:editing /template/ TextBlock#TargetValueDisplay">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="^:editing /template/ StackPanel#PART_EditPanel">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+
         <Style Selector="^:mode-minimal">
             <Setter Property="MinHeight" Value="0" />
             <Setter Property="Padding" Value="16,16,16,0" />
