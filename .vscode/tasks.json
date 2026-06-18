@@ -2,6 +2,19 @@
     "version": "2.0.0",
     "tasks": [
         {
+            // Убивает отладчик и запущенное приложение перед сборкой.
+            // Это снимает блокировку с DLL-файла, которую удерживает netcoredbg.exe.
+            "label": "kill-app",
+            "type": "shell",
+            "command": "Get-Process -Name 'netcoredbg','TemplateControl.Demo' -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared",
+                "close": true
+            }
+        },
+        {
             "label": "build",
             "command": "dotnet",
             "type": "process",
@@ -11,6 +24,7 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "dependsOn": "kill-app",
             "problemMatcher": "$msCompile",
             "group": {
                 "kind": "build",
@@ -34,16 +48,42 @@
             }
         },
         {
-            "label": "watch",
+            // 🔄 Hot Reload: запускает и следит за изменениями файлов автоматически
+            // При изменении .axaml или .cs приложение перезапускается само.
+            // DLL не блокируется отладчиком — сборка всегда удаётся.
+            "label": "watch (hot reload)",
+            "type": "shell",
             "command": "dotnet",
-            "type": "process",
             "args": [
                 "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/TemplateControl/TemplateControl.Demo.csproj"
+                "${workspaceFolder}/TemplateControl/TemplateControl.Demo.csproj",
+                "--non-interactive"
             ],
-            "problemMatcher": "$msCompile",
+            "options": {
+                "env": {
+                    "DOTNET_WATCH_RESTART_ON_RUDE_EDIT": "true"
+                }
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "custom",
+                "pattern": {
+                    "regexp": "__NEVER_MATCH__"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "dotnet watch",
+                    "endsPattern": "Application started"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "group": "hotreload",
+                "clear": true
+            },
             "group": "build"
         }
     ]

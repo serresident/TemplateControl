@@ -29,6 +29,16 @@
     <SolidColorBrush x:Key="SetValueInputFgBrush" Color="#FFFFFF" />
     <SolidColorBrush x:Key="SetValueCurrentValueFgBrush" Color="#DDDDDD" />
 
+    <!-- Header cap brushes: transparent style -->
+    <SolidColorBrush x:Key="SetValueHeaderBgBrush" Color="#00000000" />
+    <!-- Kept for theme override compatibility; unused in transparent mode -->
+    <LinearGradientBrush x:Key="SetValueHeaderShineBrush" StartPoint="0%,0%" EndPoint="100%,0%">
+        <GradientStop Color="#00FFFFFF" Offset="0" />
+        <GradientStop Color="#00FFFFFF" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="SetValueHeaderFgBrush" Color="#8899AA" />
+    <SolidColorBrush x:Key="SetValueHeaderBorderBrush" Color="#28FFFFFF" />
+
     <ControlTheme x:Key="{x:Type local:SetValueControl}" TargetType="local:SetValueControl">
         
         <Setter Property="Background" Value="{DynamicResource SetValueControlBgBrush}" />
@@ -48,8 +58,24 @@
                     
                     <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*">
                         
-                        <!-- Title Header -->
-                        <TextBlock Grid.Row="0" Text="{TemplateBinding Title}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" LetterSpacing="2" Margin="0,0,0,12" IsVisible="{Binding Title, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <!-- Title Header: transparent cap with subtle bottom separator -->
+                        <Border Grid.Row="0"
+                                Background="{DynamicResource SetValueHeaderBgBrush}"
+                                BorderBrush="{DynamicResource SetValueHeaderBorderBrush}"
+                                BorderThickness="0,0,0,1"
+                                CornerRadius="8,8,0,0"
+                                Margin="-16,-16,-16,8"
+                                Padding="0"
+                                IsVisible="{Binding Title, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <!-- Title text -->
+                            <TextBlock Text="{TemplateBinding Title}"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource SetValueHeaderFgBrush}"
+                                       LetterSpacing="2"
+                                       Margin="16,8,16,8"
+                                       VerticalAlignment="Center" />
+                        </Border>
 
                         <!-- Values & Numpad Toggle -->
                         <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,16">

@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Core Launch (Avalonia)",
+            "name": "🐛 Debug (с отладчиком)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
@@ -16,6 +16,36 @@
             "logging": {
                 "moduleLoad": false
             }
+        },
+        {
+            // Запуск БЕЗ отладчика — DLL не блокируется.
+            // Сборка через Ctrl+Shift+B (task: build) будет работать в любой момент.
+            "name": "▶ Run (без отладчика)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/TemplateControl/bin/Debug/net8.0/TemplateControl.Demo.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/TemplateControl",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "noDebug": true
+        },
+        {
+            // Hot Reload через dotnet watch.
+            // Приложение автоматически перезапускается при изменении .axaml или .cs.
+            // Никаких ручных действий не нужно — просто сохраняй файл.
+            "name": "🔄 Watch (Hot Reload)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "watch (hot reload)",
+            "program": "${workspaceFolder}/TemplateControl/bin/Debug/net8.0/TemplateControl.Demo.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/TemplateControl",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "noDebug": true
         }
     ]
 }
+
