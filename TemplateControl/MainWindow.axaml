@@ -1,0 +1,115 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:hmi="using:TemplateControl"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        Width="950" Height="650"
+        x:Class="TemplateControl.Demo.MainWindow"
+        Title="HMI Industrial Controls - PipeControl Demo"
+        Background="#121214">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header Panel -->
+        <Border Grid.Row="0" Background="#1E1E22" BorderBrush="#2D2D34" BorderThickness="0,0,0,1" Padding="20,15">
+            <StackPanel Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
+                <!-- Mini LED indicator -->
+                <Ellipse Width="12" Height="12" Fill="#00FF66" Margin="0,2,0,0">
+                    <Ellipse.Transitions>
+                        <Transitions>
+                            <DoubleTransition Property="Opacity" Duration="0:0:0.5" />
+                        </Transitions>
+                    </Ellipse.Transitions>
+                </Ellipse>
+                <TextBlock Text="INDUSTRIAL HMI SYSTEM" Foreground="#A9A9B2" FontSize="12" FontWeight="SemiBold" LetterSpacing="1.5" VerticalAlignment="Center"/>
+                <TextBlock Text="|" Foreground="#3E3E42" FontSize="14" VerticalAlignment="Center"/>
+                <TextBlock Text="PIPE CONTROL LIBRARY DEMONSTRATION" Foreground="#FFFFFF" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Workspace -->
+        <Grid Grid.Row="1" ColumnDefinitions="280,*">
+            
+            <!-- Controls / Properties Panel (Left) -->
+            <Border Grid.Column="0" Background="#18181C" BorderBrush="#2D2D34" BorderThickness="0,0,1,0" Padding="20">
+                <ScrollViewer>
+                    <StackPanel Spacing="20">
+                        <TextBlock Text="Control Features" Foreground="#FFFFFF" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                        
+                        <Border Background="#222228" CornerRadius="6" Padding="12" BorderBrush="#2D2D34" BorderThickness="1">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="3D Volume Shading" Foreground="#E1E1E6" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Text="Pipe segments are rendered with dynamic multi-stop linear gradients to simulate cylindrical volume." Foreground="#A9A9B2" FontSize="11" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#222228" CornerRadius="6" Padding="12" BorderBrush="#2D2D34" BorderThickness="1">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Elbows &amp; Fittings" Foreground="#E1E1E6" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Text="Supports 90° and 45° elbows, flanges, and automatic corner rounding at intermediate coordinates." Foreground="#A9A9B2" FontSize="11" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#222228" CornerRadius="6" Padding="12" BorderBrush="#2D2D34" BorderThickness="1">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Interactive Design Mode" Foreground="#E1E1E6" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Text="Enable design mode to show joint coordinates and interact with the pipeline routing via mouse context menus." Foreground="#A9A9B2" FontSize="11" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Pipe Mimic Showcase (Right) -->
+            <Grid Grid.Column="1" Background="#0F0F11">
+                <Canvas Margin="40">
+                    <!-- Grid Reference Visuals -->
+                    <TextBlock Canvas.Left="0" Canvas.Top="-25" Text="SCADA MIMIC PANEL (CELL SIZE = 30px)" Foreground="#5E5E66" FontSize="11" FontWeight="Bold"/>
+
+                    <!-- Pipeline 1: Water Blue Pipe (Active flow, Thickness 16, Flanges, Elbows) -->
+                    <!-- Points coordinates are in grid units: Col * CellSize + CellSize/2 -->
+                    <hmi:PipeControl Points="1,2;5,2;5,5;11,5" 
+                                     CellSize="30" 
+                                     Thickness="16" 
+                                     IsFilled="True"
+                                     ActiveColor="#00A2FF"
+                                     StartFitting="Flange"
+                                     EndFitting="Flange" />
+
+                    <!-- Labels for Pipeline 1 -->
+                    <TextBlock Canvas.Left="45" Canvas.Top="40" Text="Pipeline A: Cooling Water Flow (Active)" Foreground="#00A2FF" FontSize="11" FontWeight="SemiBold"/>
+                    <TextBlock Canvas.Left="345" Canvas.Top="168" Text="Flange" Foreground="#8A8A93" FontSize="10"/>
+                    <TextBlock Canvas.Left="15" Canvas.Top="78" Text="Flange" Foreground="#8A8A93" FontSize="10"/>
+
+                    <!-- Pipeline 2: Steam Red Pipe (Inactive, Thickness 24, Elbows) -->
+                    <hmi:PipeControl Points="1,7;7,7;7,11;14,11" 
+                                     CellSize="30" 
+                                     Thickness="22" 
+                                     IsFilled="False"
+                                     InactiveColor="#8A2E2E"
+                                     StartFitting="Elbow90"
+                                     EndFitting="ElbowMinus90" />
+                    
+                    <!-- Labels for Pipeline 2 -->
+                    <TextBlock Canvas.Left="45" Canvas.Top="190" Text="Pipeline B: Steam Pressure (Inactive / Empty)" Foreground="#EC5B5B" FontSize="11" FontWeight="SemiBold"/>
+                    <TextBlock Canvas.Left="10" Canvas.Top="250" Text="90° Elbow" Foreground="#8A8A93" FontSize="10"/>
+                    <TextBlock Canvas.Left="430" Canvas.Top="350" Text="-90° Elbow" Foreground="#8A8A93" FontSize="10"/>
+
+                    <!-- Pipeline 3: Gas Green Pipe (Active, Thickness 12, Elbow45, Design Mode enabled) -->
+                    <hmi:PipeControl Points="3,13;10,13;13,10;19,10" 
+                                     CellSize="30" 
+                                     Thickness="12" 
+                                     IsFilled="True"
+                                     ActiveColor="#00E676"
+                                     StartFitting="None"
+                                     EndFitting="Flange"
+                                     IsDesignMode="True" />
+                    
+                    <!-- Labels for Pipeline 3 -->
+                    <TextBlock Canvas.Left="100" Canvas.Top="375" Text="Pipeline C: Natural Gas (Active - Design Mode Markers Visible)" Foreground="#00E676" FontSize="11" FontWeight="SemiBold"/>
+                    <TextBlock Canvas.Left="330" Canvas.Top="320" Text="45° Angle Snapping" Foreground="#8A8A93" FontSize="10"/>
+                </Canvas>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
