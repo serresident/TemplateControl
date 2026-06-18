@@ -23,6 +23,12 @@
     <SolidColorBrush x:Key="SetValueInternalFrameBgBrush" Color="#1AFFFFFF" />
     <SolidColorBrush x:Key="SetValueInternalFrameBorderBrush" Color="#40FFFFFF" />
 
+    <!-- Accent and input colours — change these to re-theme the control -->
+    <SolidColorBrush x:Key="SetValueAccentBrush" Color="#4488FF" />
+    <SolidColorBrush x:Key="SetValueInputBgBrush" Color="#222228" />
+    <SolidColorBrush x:Key="SetValueInputFgBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SetValueCurrentValueFgBrush" Color="#DDDDDD" />
+
     <ControlTheme x:Key="{x:Type local:SetValueControl}" TargetType="local:SetValueControl">
         
         <Setter Property="Background" Value="{DynamicResource SetValueControlBgBrush}" />
@@ -49,8 +55,8 @@
                         <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
                             <StackPanel Grid.Column="0" Orientation="Vertical">
                                 <!-- Уставка Label with Blue Outline -->
-                                <Border BorderBrush="#4488FF" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,0,0,6">
-                                    <TextBlock Text="УСТАВКА" FontSize="10" FontWeight="Bold" Foreground="#4488FF" LetterSpacing="1.5" />
+                                <Border BorderBrush="{DynamicResource SetValueAccentBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,0,0,6">
+                                    <TextBlock Text="УСТАВКА" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SetValueAccentBrush}" LetterSpacing="1.5" />
                                 </Border>
                                 
                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
@@ -71,18 +77,18 @@
                                                      FontSize="32" FontWeight="Bold" 
                                                      VerticalAlignment="Center" 
                                                      HorizontalAlignment="Left"
-                                                     Background="#222228"
-                                                     Foreground="#FFFFFF"
+                                                     Background="{DynamicResource SetValueInputBgBrush}"
+                                                     Foreground="{DynamicResource SetValueInputFgBrush}"
                                                      BorderThickness="1"
-                                                     BorderBrush="#4488FF"
+                                                     BorderBrush="{DynamicResource SetValueAccentBrush}"
                                                      CornerRadius="4"
                                                      Padding="4,0"
                                                      Width="150"/>
                                             <Button x:Name="PART_ConfirmInputBtn"
                                                     Width="42" Height="42"
                                                     Padding="0"
-                                                    Background="#4488FF"
-                                                    Foreground="White"
+                                                    Background="{DynamicResource SetValueAccentBrush}"
+                                                    Foreground="{DynamicResource SetValueInputFgBrush}"
                                                     VerticalAlignment="Center"
                                                     CornerRadius="4"
                                                     AutomationProperties.Name="Подтвердить ввод">
@@ -93,10 +99,10 @@
                                     
                                     <!-- Тек: Label with Blue Outline and Value -->
                                     <StackPanel x:Name="PART_CurrentValueDisplay" Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom" Margin="0,0,0,6">
-                                        <Border BorderBrush="#4488FF" BorderThickness="1" CornerRadius="4" Padding="4,2" VerticalAlignment="Center">
-                                            <TextBlock Text="Тек:" FontSize="10" FontWeight="Bold" Foreground="#4488FF" />
+                                        <Border BorderBrush="{DynamicResource SetValueAccentBrush}" BorderThickness="1" CornerRadius="4" Padding="4,2" VerticalAlignment="Center">
+                                            <TextBlock Text="Тек:" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SetValueAccentBrush}" />
                                         </Border>
-                                        <TextBlock Text="{Binding CurrentValue, RelativeSource={RelativeSource TemplatedParent}, StringFormat={}{0:F2}}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding CurrentValue, RelativeSource={RelativeSource TemplatedParent}, StringFormat={}{0:F2}}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource SetValueCurrentValueFgBrush}" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>

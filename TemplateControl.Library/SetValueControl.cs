@@ -52,10 +52,12 @@ namespace TemplateControl
                 defaultValue: 0m,
                 coerce: CoerceValue);
 
-        public static readonly StyledProperty<decimal> CurrentValueProperty =
-            AvaloniaProperty.Register<SetValueControl, decimal>(
+        /// <remarks>DirectProperty: updated at high frequency (telemetry). Avoids StyledProperty allocations.</remarks>
+        public static readonly DirectProperty<SetValueControl, decimal> CurrentValueProperty =
+            AvaloniaProperty.RegisterDirect<SetValueControl, decimal>(
                 nameof(CurrentValue),
-                defaultValue: 0m);
+                o => o._currentValue,
+                (o, v) => o.CurrentValue = v);
 
         public static readonly StyledProperty<decimal> MinimumProperty =
             AvaloniaProperty.Register<SetValueControl, decimal>(
@@ -111,6 +113,12 @@ namespace TemplateControl
                 nameof(RecentValues),
                 defaultValue: null);
 
+        public static readonly StyledProperty<int> DecimalPlacesProperty =
+            AvaloniaProperty.Register<SetValueControl, int>(nameof(DecimalPlaces), 2);
+
+        public static readonly StyledProperty<string> TitleProperty =
+            AvaloniaProperty.Register<SetValueControl, string>(nameof(Title), string.Empty);
+
         #endregion
 
         #region Routed Events
@@ -153,8 +161,8 @@ namespace TemplateControl
 
         public decimal CurrentValue
         {
-            get => GetValue(CurrentValueProperty);
-            set => SetValue(CurrentValueProperty, value);
+            get => _currentValue;
+            set => SetAndRaise(CurrentValueProperty, ref _currentValue, value);
         }
 
         public decimal Minimum
@@ -217,17 +225,11 @@ namespace TemplateControl
             set => SetValue(RecentValuesProperty, value);
         }
 
-        public static readonly StyledProperty<int> DecimalPlacesProperty =
-            AvaloniaProperty.Register<SetValueControl, int>(nameof(DecimalPlaces), 2);
-
         public int DecimalPlaces
         {
             get => GetValue(DecimalPlacesProperty);
             set => SetValue(DecimalPlacesProperty, value);
         }
-
-        public static readonly StyledProperty<string> TitleProperty =
-            AvaloniaProperty.Register<SetValueControl, string>(nameof(Title), string.Empty);
 
         public string Title
         {
@@ -308,9 +310,11 @@ namespace TemplateControl
         private decimal _pendingTrackValue; // for the slider before clicking apply
         private DispatcherTimer? _errorTimer;
         private bool _isSliderUpdating;
+        private bool _isCommitting; // guard against double commit from LostFocus + Click
 
         #endregion
 
+        private decimal _currentValue; // backing field for CurrentValueProperty (DirectProperty)
         private ObservableCollection<decimal>? _internalJournal;
 
         public SetValueControl()
@@ -516,20 +520,28 @@ namespace TemplateControl
 
         private void CommitValueInput()
         {
-            if (!PseudoClasses.Contains(":editing")) return;
+            if (_isCommitting || !PseudoClasses.Contains(":editing")) return;
+            _isCommitting = true;
             PseudoClasses.Set(":editing", false);
 
-            if (_valueInput != null && !string.IsNullOrWhiteSpace(_valueInput.Text))
+            try
             {
-                string text = _valueInput.Text.Replace(',', '.');
-                if (decimal.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal parsed))
+                if (_valueInput != null && !string.IsNullOrWhiteSpace(_valueInput.Text))
                 {
-                    parsed = Math.Round(parsed, DecimalPlaces, MidpointRounding.AwayFromZero);
-                    if (parsed < Minimum) parsed = Minimum;
-                    if (parsed > Maximum) parsed = Maximum;
+                    string text = _valueInput.Text.Replace(',', '.');
+                    if (decimal.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal parsed))
+                    {
+                        parsed = Math.Round(parsed, DecimalPlaces, MidpointRounding.AwayFromZero);
+                        if (parsed < Minimum) parsed = Minimum;
+                        if (parsed > Maximum) parsed = Maximum;
 
-                    TryProposeValue(parsed);
+                        TryProposeValue(parsed);
+                    }
                 }
+            }
+            finally
+            {
+                _isCommitting = false;
             }
         }
 

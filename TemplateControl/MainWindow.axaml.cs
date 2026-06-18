@@ -20,6 +20,12 @@ namespace TemplateControl.Demo
 
         private void OnSetValueChanged(object? sender, NumericValueChangedEventArgs e)
         {
+            if (sender is SetValueControl control && e.NewValue.HasValue)
+            {
+                // In a real app this comes from PLC. For demo, we just simulate the current value following the setpoint.
+                control.CurrentValue = e.NewValue.Value;
+            }
+
             var log = this.FindControl<TextBlock>("DemoLog");
             if (log != null)
             {
