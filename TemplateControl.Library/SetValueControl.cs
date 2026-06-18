@@ -355,6 +355,7 @@ namespace TemplateControl
 
             // Global interception for NumericPad Submits and QuickSet Buttons
             AddHandler(NumericPad.SubmitEvent, OnNumericPadSubmit);
+            AddHandler(NumericPad.CancelEvent, OnNumericPadCancel);
             AddHandler(Button.ClickEvent, OnGlobalButtonClick, RoutingStrategies.Bubble);
 
             UpdatePseudoClasses();
@@ -372,6 +373,7 @@ namespace TemplateControl
             if (_track != null) _track.ValueChanged -= OnTrackValueChanged;
 
             RemoveHandler(NumericPad.SubmitEvent, OnNumericPadSubmit);
+            RemoveHandler(NumericPad.CancelEvent, OnNumericPadCancel);
             RemoveHandler(Button.ClickEvent, OnGlobalButtonClick);
 
             _errorTimer?.Stop();
@@ -488,6 +490,11 @@ namespace TemplateControl
                     }
                 }
                 _numPadPopup.IsOpen = !_numPadPopup.IsOpen;
+                if (_numPadPopup.IsOpen)
+                {
+                    var pad = _numPadPopup.Child as NumericPad ?? (_numPadPopup.Child as Border)?.Child as NumericPad;
+                    pad?.Focus();
+                }
             }
             e.Handled = true;
         }
@@ -500,6 +507,12 @@ namespace TemplateControl
                 TryProposeValue(pad.Value.Value);
                 pad.Value = null; // reset numpad after submit
             }
+            e.Handled = true;
+        }
+
+        private void OnNumericPadCancel(object? sender, RoutedEventArgs e)
+        {
+            if (_numPadPopup != null) _numPadPopup.IsOpen = false;
             e.Handled = true;
         }
 

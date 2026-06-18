@@ -30,10 +30,9 @@ namespace TemplateControl
     /// Provides digit buttons, decimal separator, backspace, clear and submit functionality.
     /// All visual representation is defined entirely through <see cref="ControlTemplate"/>.
     /// </summary>
+    [TemplatePart("PART_CancelButton", typeof(Button))]
     [TemplatePart("PART_Display", typeof(TextBlock))]
     [TemplatePart("PART_ClearButton", typeof(Button))]
-    [TemplatePart("PART_BackspaceButton", typeof(Button))]
-    [TemplatePart("PART_SubmitButton", typeof(Button))]
     [TemplatePart("PART_DecimalButton", typeof(Button))]
     [PseudoClasses(":error", ":empty")]
     public class NumericPad : TemplatedControl
@@ -75,6 +74,10 @@ namespace TemplateControl
             RoutedEvent.Register<NumericPad, RoutedEventArgs>(
                 nameof(Submit), RoutingStrategies.Bubble);
 
+        public static readonly RoutedEvent<RoutedEventArgs> CancelEvent =
+            RoutedEvent.Register<NumericPad, RoutedEventArgs>(
+                nameof(Cancel), RoutingStrategies.Bubble);
+
         public event EventHandler<NumericValueChangedEventArgs>? ValueChanged
         {
             add => AddHandler(ValueChangedEvent, value);
@@ -85,6 +88,12 @@ namespace TemplateControl
         {
             add => AddHandler(SubmitEvent, value);
             remove => RemoveHandler(SubmitEvent, value);
+        }
+
+        public event EventHandler<RoutedEventArgs>? Cancel
+        {
+            add => AddHandler(CancelEvent, value);
+            remove => RemoveHandler(CancelEvent, value);
         }
 
         #endregion
@@ -148,6 +157,7 @@ namespace TemplateControl
         #region Template Parts
 
         private TextBlock? _displayTextBlock;
+        private Button? _cancelButton;
         private Button? _clearButton;
         private Button? _backspaceButton;
         private Button? _submitButton;
@@ -194,12 +204,16 @@ namespace TemplateControl
 
             // Find new template parts (null-safe)
             _displayTextBlock = e.NameScope.Find<TextBlock>("PART_Display");
+            _cancelButton = e.NameScope.Find<Button>("PART_CancelButton");
             _clearButton = e.NameScope.Find<Button>("PART_ClearButton");
             _backspaceButton = e.NameScope.Find<Button>("PART_BackspaceButton");
             _submitButton = e.NameScope.Find<Button>("PART_SubmitButton");
             _decimalButton = e.NameScope.Find<Button>("PART_DecimalButton");
 
             // Subscribe to specific PART_ button events
+            if (_cancelButton != null)
+                _cancelButton.Click += OnCancelClick;
+
             if (_clearButton != null)
                 _clearButton.Click += OnClearClick;
 
@@ -225,6 +239,9 @@ namespace TemplateControl
 
         private void UnsubscribeTemplateParts()
         {
+            if (_cancelButton != null)
+                _cancelButton.Click -= OnCancelClick;
+
             if (_clearButton != null)
                 _clearButton.Click -= OnClearClick;
 
@@ -297,6 +314,12 @@ namespace TemplateControl
         #endregion
 
         #region Button Click Handlers
+
+        private void OnCancelClick(object? sender, RoutedEventArgs e)
+        {
+            RaiseEvent(new RoutedEventArgs(CancelEvent));
+            e.Handled = true;
+        }
 
         private void OnGlobalButtonClick(object? sender, RoutedEventArgs e)
         {
@@ -453,13 +476,52 @@ namespace TemplateControl
             PseudoClasses.Set(":error", true);
 
             _errorTimer?.Stop();
-            _errorTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
+            _errorTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
             _errorTimer.Tick += (s, e) =>
             {
                 PseudoClasses.Set(":error", false);
-                _errorTimer?.Stop();
+                _errorTimer.Stop();
             };
             _errorTimer.Start();
+        }
+
+        protected override void OnKeyDown(Avalonia.Input.KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+
+            if (e.Key >= Avalonia.Input.Key.D0 && e.Key <= Avalonia.Input.Key.D9)
+            {
+                AppendDigit((e.Key - Avalonia.Input.Key.D0).ToString());
+                e.Handled = true;
+            }
+            else if (e.Key >= Avalonia.Input.Key.NumPad0 && e.Key <= Avalonia.Input.Key.NumPad9)
+            {
+                AppendDigit((e.Key - Avalonia.Input.Key.NumPad0).ToString());
+                e.Handled = true;
+            }
+            else if (e.Key == Avalonia.Input.Key.Back)
+            {
+                OnBackspaceClick(this, new RoutedEventArgs());
+                e.Handled = true;
+            }
+            else if (e.Key == Avalonia.Input.Key.Enter || e.Key == Avalonia.Input.Key.Return)
+            {
+                OnSubmitClick(this, new RoutedEventArgs());
+                e.Handled = true;
+            }
+            else if (e.Key == Avalonia.Input.Key.Escape)
+            {
+                OnCancelClick(this, new RoutedEventArgs());
+                e.Handled = true;
+            }
+            else if (e.Key == Avalonia.Input.Key.Decimal || e.Key == Avalonia.Input.Key.OemPeriod || e.Key == Avalonia.Input.Key.OemComma)
+            {
+                OnDecimalClick(this, new RoutedEventArgs());
+                e.Handled = true;
+            }
         }
 
         #endregion

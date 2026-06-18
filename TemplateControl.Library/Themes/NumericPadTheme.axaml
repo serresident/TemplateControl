@@ -20,22 +20,38 @@
                         Padding="8">
                     <Grid RowDefinitions="Auto,Auto,*,Auto">
 
-                        <!-- Row 0: Min/Max display -->
-                        <Grid Grid.Row="0" ColumnDefinitions="*,*" Margin="0,0,0,4">
+                        <!-- Row 0: Min/Max display & Close -->
+                        <Grid Grid.Row="0" ColumnDefinitions="*,*,Auto" Margin="0,0,0,4">
                             <TextBlock Grid.Column="0"
                                        FontSize="10"
                                        Foreground="#4488FF"
-                                       HorizontalAlignment="Left">
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Bottom">
                                 <Run Text="Мин: " />
                                 <Run Text="{TemplateBinding Minimum}" />
                             </TextBlock>
                             <TextBlock Grid.Column="1"
                                        FontSize="10"
                                        Foreground="#FF4444"
-                                       HorizontalAlignment="Right">
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Bottom"
+                                       Margin="0,0,8,0">
                                 <Run Text="Макс: " />
                                 <Run Text="{TemplateBinding Maximum}" />
                             </TextBlock>
+                            
+                            <Button Grid.Column="2" x:Name="PART_CancelButton"
+                                    Width="24" Height="24"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                    Padding="0"
+                                    Margin="0,-4,-4,0"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    AutomationProperties.Name="Закрыть">
+                                <TextBlock Text="✕" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                            </Button>
                         </Grid>
 
                         <!-- Row 1: Display -->
