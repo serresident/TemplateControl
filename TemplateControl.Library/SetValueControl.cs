@@ -505,17 +505,60 @@ namespace TemplateControl
 
         private void OnValueInputTextInput(object? sender, Avalonia.Input.TextInputEventArgs e)
         {
-            if (string.IsNullOrEmpty(e.Text)) return;
+            if (_valueInput == null || string.IsNullOrEmpty(e.Text)) return;
 
-            string allowedChars = "0123456789.,-";
+            // --- 1. Block structurally invalid characters (same as before) ---
+            const string allowedChars = "0123456789.,-";
             foreach (char c in e.Text)
             {
                 if (!allowedChars.Contains(c))
                 {
                     e.Handled = true;
-                    break;
+                    return;
                 }
             }
+
+            // Build candidate string: simulate what the TextBox will look like after the input.
+            // Accounts for cursor position and any active selection (selection gets replaced).
+            string current  = _valueInput.Text ?? string.Empty;
+            int selStart    = Math.Clamp(_valueInput.SelectionStart, 0, current.Length);
+            int selEnd      = Math.Clamp(_valueInput.SelectionEnd,   selStart, current.Length);
+            string beforeSel = current[..selStart];
+            string afterSel  = current[selEnd..];
+            string remaining = beforeSel + afterSel; // text that will survive the edit
+
+            // --- 2. Guard: minus sign ---
+            // Allow "-" only as the very first character and only when Minimum < 0.
+            if (e.Text == "-")
+            {
+                if (Minimum >= 0 || selStart != 0 || beforeSel.Contains('-'))
+                    e.Handled = true;
+                return; // partial input — don't run bounds check yet
+            }
+
+            // --- 3. Guard: decimal separator ---
+            // Block a second "." or "," when one already exists outside the selection.
+            if (e.Text is "." or ",")
+            {
+                if (remaining.Replace(',', '.').Contains('.'))
+                    e.Handled = true;
+                return; // partial input — don't run bounds check yet
+            }
+
+            // --- 4. Bounds check (mirrors NumericPad.AppendDigit) ---
+            // Build candidate and normalise separator before parsing.
+            string candidate = (beforeSel + e.Text + afterSel).Replace(',', '.');
+            if (decimal.TryParse(candidate,
+                                 System.Globalization.NumberStyles.Any,
+                                 System.Globalization.CultureInfo.InvariantCulture,
+                                 out decimal parsed))
+            {
+                // If the fully parseable candidate is already out of range — block silently.
+                if (parsed > Maximum || parsed < Minimum)
+                    e.Handled = true;
+            }
+            // If candidate is not yet parseable (e.g. "12." or "-0") — allow; CommitValueInput
+            // will clamp on submit.
         }
 
         private void CommitValueInput()
