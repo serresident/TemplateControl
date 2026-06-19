@@ -106,7 +106,8 @@ namespace TemplateControl
         public static readonly StyledProperty<decimal?> RecommendedValueProperty =
             AvaloniaProperty.Register<SetValueControl, decimal?>(
                 nameof(RecommendedValue),
-                defaultValue: null);
+                defaultValue: null,
+                coerce: CoerceRecommendedValue);
 
         public static readonly StyledProperty<IEnumerable<decimal>?> RecentValuesProperty =
             AvaloniaProperty.Register<SetValueControl, IEnumerable<decimal>?>(
@@ -284,6 +285,18 @@ namespace TemplateControl
             return value;
         }
 
+        /// <summary>
+        /// Clamps RecommendedValue to [Minimum, Maximum].
+        /// null is allowed and passes through unchanged (means "no recommendation").
+        /// </summary>
+        private static decimal? CoerceRecommendedValue(AvaloniaObject obj, decimal? value)
+        {
+            if (value is null) return null;
+            if (obj is SetValueControl c)
+                return Math.Clamp(value.Value, c.Minimum, c.Maximum);
+            return value;
+        }
+
         #endregion
 
         #region Template Parts
@@ -442,6 +455,7 @@ namespace TemplateControl
             else if (change.Property == MinimumProperty || change.Property == MaximumProperty)
             {
                 CoerceValue(ValueProperty);
+                CoerceValue(RecommendedValueProperty);
                 if (_track != null)
                 {
                     _track.Minimum = (double)Minimum;
@@ -721,7 +735,7 @@ namespace TemplateControl
             return 100m;
         }
 
-        private void TryProposeValue(decimal val)
+        internal void TryProposeValue(decimal val)
         {
             if (val < Minimum || val > Maximum)
             {
